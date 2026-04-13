@@ -311,10 +311,17 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
                             <i className="bi bi-exclamation-octagon me-2" /> Grievances
                         </NavLink>
 
-                        {/* 9. Logout */}
+                        {/* 9. Update and Withdraw Form */}
+                        <NavLink to="/updateandWithdrawForm" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-pencil-square me-2" /> Update and Withdraw Form
+                        </NavLink>
+
+                        {/* 10. Logout */}
                         <button className="btn btn-danger mt-4" onClick={logoutAdmin} type="button">
                             Logout
                         </button>
+                        
+
                     </>
                 )}
             </div>
