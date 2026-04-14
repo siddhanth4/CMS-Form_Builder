@@ -200,6 +200,9 @@ import ConsentWithdrawRequest from "../formbuilder/consentWithdrawReport";
 import PrivacyNoticePage from "../Admin/PrivacyNoticePage";
 import GrievancesPage from "../Admin/GrievancesPage";
 import UpdateAndWithdrawForm from "../formbuilder/updateandWithdrawForm";
+import DbCluster from "../Organization/DbCluster";
+import Logs from "../Organization/Logs";
+import Billing from "../Organization/BillingPlan";
 
 const Layout: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -279,6 +282,31 @@ const Layout: React.FC = () => {
                                     </ProtectedRoute>
                                 }
                             />
+                            <Route
+                                path="/organization/DbCluster"
+                                element={
+                                    <ProtectedRoute type="organization">
+                                        <DbCluster />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/organization/Logs"
+                                element={
+                                    <ProtectedRoute type="organization">
+                                        <Logs />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/organization/Billing"
+                                element={
+                                    <ProtectedRoute type="organization">
+                                        <Billing />
+                                    </ProtectedRoute>
+                                }
+                            />
+
 
                             {/* Admin Routes */}
                             <Route
