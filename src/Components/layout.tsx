@@ -199,7 +199,6 @@ import MyFormDetails from "../formbuilder/myFormDetail";
 import ConsentWithdrawRequest from "../formbuilder/consentWithdrawReport";
 import PrivacyNoticePage from "../Admin/PrivacyNoticePage";
 import GrievancesPage from "../Admin/GrievancesPage";
-import UpdateAndWithdrawForm from "../formbuilder/updateandWithdrawForm";
 import DbCluster from "../Organization/DbCluster";
 import Logs from "../Organization/Logs";
 import Billing from "../Organization/BillingPlan";
@@ -226,9 +225,6 @@ const Layout: React.FC = () => {
                 <Route path="/organization/organizationLogin" element={<OrganizationLogin />} />
                 <Route path="/PublicFormView" element={<PublicFormView />} />
                 <Route path="/myFormDetails" element={<MyFormDetails />} />
-                <Route path="/updateandWithdrawForm/:formId" element={<UpdateAndWithdrawForm />} />
-                <Route path="/updateandWithdrawForm/:formId/:responseId" element={<UpdateAndWithdrawForm />} />
-
                 {/* ✅ page not found without sidebar */}
                 <Route
                     path="*"
