@@ -1840,7 +1840,7 @@ const PublicFormView: React.FC = () => {
                         background: rgba(255,255,255,0.2); 
                     }
                 `}</style>
-                <div style={{ maxWidth: "800px", width: "100%", padding: "0 16px" }}>
+                <div style={{ width: "100%", padding: "0" }}>
                     
                     {/* Topbar / Branding */}
                     <div className="d-flex align-items-center gap-3 mb-4 justify-content-center">
@@ -1855,12 +1855,12 @@ const PublicFormView: React.FC = () => {
 
                     {/* Main Gateway Card */}
                     <div className="card shadow-lg border-0" style={{ background: "#11131a", borderRadius: "16px", overflow: "hidden" }}>
-                        <div className="card-header p-4 p-md-5 pb-0 border-0 bg-transparent">
+                        <div className="card-header p-3 p-md-3.5 pb-0 border-0 bg-transparent">
                             <div className="d-flex align-items-center gap-3">
                                 <div style={{ width: 48, height: 48, borderRadius: "12px", background: "rgba(79,110,247,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                     <i className="bi bi-shield-check fs-4" style={{ color: "#7c9ff7" }}></i>
                                 </div>
-                                <div>
+                                <div >
                                     <h4 className="mb-1 fw-bold text-white">Data Privacy Notice</h4>
                                     <p className="mb-0" style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
                                         Please review and acknowledge our data processing policy.
@@ -1869,9 +1869,10 @@ const PublicFormView: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="card-body p-4 p-md-5 pt-4">
+                        <div className="card-body p-4 pt-4">
                             {noticeLoading ? (
                                 <div className="text-center py-5 my-4">
+                                    
                                     <div className="spinner-border mb-3" style={{ width: "2rem", height: "2rem", color: "#4f6ef7" }}></div>
                                     <h6 className="fw-semibold text-white">Loading Notice...</h6>
                                     <div className="small" style={{ color: "#94a3b8" }}>Retrieving secure document</div>
@@ -1881,10 +1882,11 @@ const PublicFormView: React.FC = () => {
                                     <div
                                         className="custom-notice-html mb-4"
                                         style={{
-                                            maxHeight: "50vh",
+                                            maxHeight: "100vh",
+                                            // maxWidth: "100vh",
                                             overflowY: "auto",
                                             border: "1px solid rgba(255,255,255,0.06)",
-                                            padding: "24px",
+                                            padding: "20px",
                                             borderRadius: "12px",
                                             background: "#08090c", 
                                             boxShadow: "inset 0px 2px 12px rgba(0,0,0,0.3)"
