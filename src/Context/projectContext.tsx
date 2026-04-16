@@ -350,7 +350,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
   const loadMenus = async (p: MenuListParams) => {
-    // ✅ Don't call API again if already loaded
+    // Don't call API again if already loaded
     if (menus.length > 0) return;
 
     try {
@@ -358,7 +358,33 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setMenusError("");
 
       const list = await getMenuList(p);
-      setMenus(list);
+      
+      // Add Privacy Notice and Grievances as actual menu items to ensure consistency
+      const extendedList = [
+        ...list,
+        {
+          Id: 9991,
+          PageKey: "privacy_notices",
+          Icon: "bi-file-earmark-lock2",
+          PageName: "Privacy Notices",
+          Route: "/admin/privacyNotices",
+          SortOrder: 999,
+          Status: "Y" as const,
+          TTime: new Date().toISOString(),
+        },
+        {
+          Id: 9992,
+          PageKey: "grievances",
+          Icon: "bi-exclamation-octagon",
+          PageName: "Grievances",
+          Route: "/admin/grievances",
+          SortOrder: 1000,
+          Status: "Y" as const,
+          TTime: new Date().toISOString(),
+        },
+      ];
+      
+      setMenus(extendedList);
     } catch (err: any) {
       setMenus([]);
       setMenusError(err?.message || "Failed to fetch menu list");

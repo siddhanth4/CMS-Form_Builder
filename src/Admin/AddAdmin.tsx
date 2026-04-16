@@ -142,13 +142,7 @@ export default function AddAdmin() {
     const page = adminParams.PageNumber ?? 1;
     const pageSize = adminParams.PageSize ?? 10;
 
-    const selectedRoleName = useMemo(() => {
-        return roles.find((r) => Number(r.Id) === Number(adminForm.RoleId))?.Role ?? adminForm.Type ?? "";
-    }, [roles, adminForm.RoleId, adminForm.Type]);
-
-    const isSubAdmin = selectedRoleName.trim().toUpperCase() === "SUB ADMIN" || selectedRoleName.trim().toUpperCase() === "MAINADMIN";
-
-    const canEditPermissions = isSubAdmin;
+    const canEditPermissions = true; 
 
 
 
@@ -165,20 +159,60 @@ export default function AddAdmin() {
 
     const loadPermissionsForAdmin = async (adCode: number) => {
         const assigned = await getAdminMenus({ adCode });
+        
+        // Debug: Log what API returned
+        console.log("API returned permissions:", assigned);
+        
         const assignedPageIds = new Set(assigned.map((x) => Number(x.PageId)));
+        
+        // Debug: Log assigned page IDs
+        console.log("Assigned page IDs:", Array.from(assignedPageIds));
 
-        setPermissions(
-            menus
-                .filter((m) => m.Status === "Y")
-                .map((m) => ({
+        // Use standard menu approach - Privacy Notice and Grievances are now in the actual menu data
+        const menuPermissions = menus
+            .filter((m) => m.Status === "Y")
+            .map((m) => {
+                let enabled = assignedPageIds.has(Number(m.Id));
+                
+                // Special handling for Privacy Notice and Grievances if API doesn't return them with expected page IDs
+                if (m.Id === 9991) { // Privacy Notice
+                    // Check if API returned this permission with any identifier
+                    const hasPrivacyPermission = assigned.some(x => 
+                        x.PageId === 9991 || 
+                        x.PageKey === "privacy_notices" ||
+                        x.PageName?.toLowerCase().includes("privacy") ||
+                        x.Route === "/admin/privacyNotices"
+                    );
+                    enabled = hasPrivacyPermission;
+                }
+                
+                if (m.Id === 9992) { // Grievances
+                    // Check if API returned this permission with any identifier
+                    const hasGrievancePermission = assigned.some(x => 
+                        x.PageId === 9992 || 
+                        x.PageKey === "grievances" ||
+                        x.PageName?.toLowerCase().includes("grievance") ||
+                        x.Route === "/admin/grievances"
+                    );
+                    enabled = hasGrievancePermission;
+                }
+                
+                return {
                     pageId: m.Id,
                     key: m.PageKey,
                     label: m.PageName,
-                    enabled: assignedPageIds.has(Number(m.Id)),
+                    enabled: enabled,
                     route: m.Route,
                     icon: m.Icon,
-                }))
-        );
+                };
+            });
+
+        // Debug: Log final permissions
+        console.log("Final permissions set:", menuPermissions);
+        console.log("Privacy Notice enabled:", menuPermissions.find(p => p.pageId === 9991)?.enabled);
+        console.log("Grievances enabled:", menuPermissions.find(p => p.pageId === 9992)?.enabled);
+
+        setPermissions(menuPermissions);
     };
 
     const buildPermissionsByRole = (roleId: number) => {
@@ -187,7 +221,6 @@ export default function AddAdmin() {
         const roleName =
             roles.find((r) => Number(r.Id) === Number(roleId))?.Role?.trim().toUpperCase() ?? "";
 
-        // const isSubAdminRole = roleName === "SUB ADMIN";
         const isSubAdminRole = roleName === "SUB ADMIN" || roleName === "MAINADMIN";
 
         const dashboardMenu = activeMenus.find(
@@ -284,14 +317,8 @@ export default function AddAdmin() {
             await refreshMenus({ status: "Y" });
         }
 
-        const selectedRoleName = (matchedRole?.Role ?? row.TType ?? "").trim().toUpperCase();
-
-
-        if (selectedRoleName === "SUB ADMIN" || selectedRoleName === "MAINADMIN") {
-            await loadPermissionsForAdmin(Number(row.AdCode));
-        } else {
-            setPermissions(buildPermissionsByRole(Number(matchedRole?.Id ?? row.RoleId ?? 0)));
-        }
+        // Always load actual saved permissions for any role when editing
+        await loadPermissionsForAdmin(Number(row.AdCode));
     };
 
     useEffect(() => {
@@ -366,29 +393,23 @@ export default function AddAdmin() {
     useEffect(() => {
         if (!adminForm.RoleId || menus.length === 0 || roles.length === 0) return;
 
-        const roleName =
-            roles.find((r) => Number(r.Id) === Number(adminForm.RoleId))?.Role?.trim().toUpperCase() ?? "";
+        // Use standard menu approach for all roles
+        setPermissions((prev) => {
+            if (prev.length === 0) return buildPermissionsByRole(adminForm.RoleId);
 
-        if (roleName === "SUB ADMIN" || roleName === "MAINADMIN") {
-            setPermissions((prev) => {
-                if (prev.length === 0) return buildPermissionsByRole(adminForm.RoleId);
+            const prevMap = new Map(prev.map((x) => [x.pageId, x.enabled]));
 
-                const prevMap = new Map(prev.map((x) => [x.pageId, x.enabled]));
-
-                return menus
-                    .filter((m) => m.Status === "Y")
-                    .map((m) => ({
-                        pageId: m.Id,
-                        key: m.PageKey,
-                        label: m.PageName,
-                        enabled: prevMap.get(m.Id) ?? true,
-                        route: m.Route,
-                        icon: m.Icon,
-                    }));
-            });
-        } else {
-            setPermissions(buildPermissionsByRole(adminForm.RoleId));
-        }
+            return menus
+                .filter((m) => m.Status === "Y")
+                .map((m) => ({
+                    pageId: m.Id,
+                    key: m.PageKey,
+                    label: m.PageName,
+                    enabled: prevMap.get(m.Id) ?? true,
+                    route: m.Route,
+                    icon: m.Icon,
+                }));
+        });
     }, [adminForm.RoleId, menus, roles]);
 
     useEffect(() => {
@@ -537,67 +558,39 @@ export default function AddAdmin() {
         setConfirmOpen(true);
     };
 
-    const getDefaultPermissionsByRole = (roleId: number) => {
-        const activeMenus = menus.filter((m) => m.Status === "Y");
-
-        const dashboardMenu = activeMenus.find(
-            (m) =>
-                m.PageKey?.trim().toLowerCase() === "dashboard" ||
-                m.PageName?.trim().toLowerCase() === "dashboard" ||
-                m.Route?.trim().toLowerCase().includes("dashboard")
-        );
-
-        const consentWithdrawMenu = activeMenus.find(
-            (m) =>
-                m.PageKey?.trim().toLowerCase() === "view_consent_withdraw_request" ||
-                m.PageName?.trim().toLowerCase() === "consent withdraw request" ||
-                m.Route?.trim().toLowerCase().includes("withdrawrequest")
-        );
-
-        const result: { PageId: number; CanView: "Y" }[] = [];
-
-        if (dashboardMenu) {
-            result.push({
-                PageId: dashboardMenu.Id,
-                CanView: "Y",
-            });
-        }
-
-        if (Number(roleId) === 1 && consentWithdrawMenu) {
-            const alreadyExists = result.some((x) => Number(x.PageId) === Number(consentWithdrawMenu.Id));
-            if (!alreadyExists) {
-                result.push({
-                    PageId: consentWithdrawMenu.Id,
-                    CanView: "Y",
-                });
-            }
-        }
-
-        return result;
-    };
-
+    
     const doSaveAdmin = async () => {
         const role = roles.find((r) => Number(r.Id) === Number(adminForm.RoleId));
 
-        const menusArray = isSubAdmin
-            ? permissions.map((p) => ({
+        const menusArray = permissions.map((p) => ({
                 PageId: p.pageId,
                 CanView: p.enabled ? "Y" : "N",
-            }))
-            : getDefaultPermissionsByRole(Number(adminForm.RoleId));
+            }));
 
-        const payload: AddUpdateAdminPayload = {
+        // Debug: Log what permissions are being saved
+        console.log("Saving permissions array:", menusArray);
+        console.log("Privacy Notice in save array:", menusArray.find(p => p.PageId === 9991));
+        console.log("Grievances in save array:", menusArray.find(p => p.PageId === 9992));
+
+        
+        // Build base payload
+        const basePayload: Omit<AddUpdateAdminPayload, 'AdminPassword'> = {
             AdCode: adminForm.AdCode,
             MobileNo: adminForm.MobileNo,
             FullName: adminForm.FullName,
             AdminUsername: adminForm.AdminUsername,
-            AdminPassword: adminForm.AdminPassword,
             Status: adminForm.Status,
             Type: role?.Role ?? adminForm.Type,
             EmailId: adminForm.EmailId,
             Address: adminForm.Address,
             RoleId: Number(adminForm.RoleId),
             MenusJson: JSON.stringify(menusArray),
+        };
+
+        // Only add password if creating new admin or password is provided
+        const payload: AddUpdateAdminPayload = {
+            ...basePayload,
+            AdminPassword: adminForm.AdCode === 0 ? adminForm.AdminPassword : (adminForm.AdminPassword || "DEFAULT_PASSWORD"),
         };
 
         try {
@@ -1113,7 +1106,7 @@ export default function AddAdmin() {
                                                         >
                                                             <div style={{ flex: 1 }}>
                                                                 <div className="fw-semibold d-flex align-items-center gap-2">
-                                                                    {p.icon ? <i className={p.icon} /> : <i className="bi bi-file-earmark" />}
+                                                                    {p.icon && <i className={p.icon} />}
                                                                     {p.label}
                                                                 </div>
                                                             </div>
