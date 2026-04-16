@@ -39,7 +39,10 @@ export const addUpdateAdmin = async (
     const formData = new FormData();
 
     Object.entries(payload).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        // Always include AdminPassword field for API validation
+        if (key === 'AdminPassword') {
+            formData.append(key, String(value || ""));
+        } else if (value !== undefined && value !== null) {
             formData.append(key, String(value));
         }
     });

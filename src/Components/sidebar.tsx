@@ -194,7 +194,7 @@
 
 // export default Sidebar;
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useOrganizationAuth } from "../Context/organizationContext";
 import { useProject } from "../Context/projectContext";
@@ -215,6 +215,9 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
     const {
         logoutAdmin,
         isAdminAuthenticated,
+        adminMenus,
+        adminMenusLoading,
+        refreshAdminMenus,
     } = useProject();
 
     const pathname = location.pathname.toLowerCase();
@@ -229,6 +232,154 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
         if (isOrgAuthenticated && !isAdminAuthenticated) return "organization";
         return "none";
     }, [isAdminRoute, isOrgRoute, isAdminAuthenticated, isOrgAuthenticated]);
+
+    // Filter and sort admin menus based on permissions
+    const visibleAdminMenus = useMemo(() => {
+        if (!adminMenus || adminMenus.length === 0) return [];
+        
+        // Debug: Log what adminMenus contains
+        console.log("AdminMenus from API:", adminMenus);
+        console.log("Privacy Notice in adminMenus:", adminMenus.find(m => 
+            m.Id === 9991 || 
+            m.PageKey === "privacy_notices" ||
+            m.PageName?.toLowerCase().includes("privacy")
+        ));
+        console.log("Grievances in adminMenus:", adminMenus.find(m => 
+            m.Id === 9992 || 
+            m.PageKey === "grievances" ||
+            m.PageName?.toLowerCase().includes("grievance")
+        ));
+        
+        let menuPermissions = [...adminMenus].sort((a, b) => Number(a.SortOrder) - Number(b.SortOrder));
+        
+        // Add Privacy Notice if not present in adminMenus (for main admin)
+        const hasPrivacyNotice = menuPermissions.some(m => 
+            m.Id === 9991 || 
+            m.PageKey === "privacy_notices" ||
+            m.PageName?.toLowerCase().includes("privacy") ||
+            m.Route === "/admin/privacyNotices"
+        );
+
+        if (!hasPrivacyNotice) {
+            menuPermissions.push({
+                Id: 9991,
+                PageId: 9991,
+                PageKey: "privacy_notices",
+                Icon: "bi-shield-lock",
+                PageName: "Privacy Notice",
+                Route: "/admin/privacyNotices",
+                SortOrder: 999,
+                Status: "Y" as const,
+                TTime: new Date().toISOString(),
+            });
+        }
+
+        // Add Grievances if not present in adminMenus (for main admin)
+        const hasGrievances = menuPermissions.some(m => 
+            m.Id === 9992 || 
+            m.PageKey === "grievances" ||
+            m.PageName?.toLowerCase().includes("grievance") ||
+            m.Route === "/admin/grievances"
+        );
+
+        if (!hasGrievances) {
+            menuPermissions.push({
+                Id: 9992,
+                PageId: 9992,
+                PageKey: "grievances",
+                Icon: "bi-exclamation-triangle",
+                PageName: "Grievances",
+                Route: "/admin/grievances",
+                SortOrder: 1000,
+                Status: "Y" as const,
+                TTime: new Date().toISOString(),
+            });
+        }
+        
+        console.log("Final menu permissions:", menuPermissions);
+        return menuPermissions;
+    }, [adminMenus]);
+
+    // Map icon names to Bootstrap icon classes
+    const menuIconClass = (icon: string, pageName?: string) => {
+        const iconLower = (icon || "").toLowerCase();
+        const nameLower = (pageName || "").toLowerCase();
+        
+        // More specific icon mapping based on page name and icon
+        if (nameLower.includes("dashboard") || iconLower === "dashboard" || iconLower === "speedometer2") {
+            return "bi-speedometer2";
+        }
+        if (nameLower.includes("admin") || nameLower.includes("role") || nameLower.includes("user") || iconLower === "people") {
+            return "bi-people";
+        }
+        if (nameLower.includes("form") && nameLower.includes("list") || iconLower === "list-check") {
+            return "bi-list-ul";
+        }
+        if (nameLower.includes("form") && nameLower.includes("response") || iconLower === "envelope-paper") {
+            return "bi-envelope";
+        }
+        if (nameLower.includes("consent") && nameLower.includes("withdraw") || iconLower === "shield-x") {
+            return "bi-shield-exclamation";
+        }
+        if (nameLower.includes("privacy") || iconLower === "file-earmark-lock2") {
+            return "bi-shield-lock";
+        }
+        if (nameLower.includes("grievance") || iconLower === "exclamation-octagon") {
+            return "bi-exclamation-triangle";
+        }
+        if (nameLower.includes("add") && nameLower.includes("form") || iconLower === "ui-checks-grid") {
+            return "bi-plus-square";
+        }
+        if (nameLower.includes("organization") || iconLower === "building") {
+            return "bi-building";
+        }
+        if (nameLower.includes("database") || iconLower === "database") {
+            return "bi-database";
+        }
+        if (nameLower.includes("logs") || iconLower === "list") {
+            return "bi-journal-text";
+        }
+        if (nameLower.includes("billing") || iconLower === "credit-card") {
+            return "bi-credit-card";
+        }
+        
+        // Fallback to icon-based mapping
+        switch (iconLower) {
+            case "dashboard":
+                return "bi-speedometer2";
+            case "people":
+                return "bi-people";
+            case "ui-checks-grid":
+                return "bi-plus-square";
+            case "list-check":
+                return "bi-list-ul";
+            case "envelope-paper":
+                return "bi-envelope";
+            case "shield-x":
+                return "bi-shield-exclamation";
+            case "file-earmark-lock2":
+                return "bi-shield-lock";
+            case "exclamation-octagon":
+                return "bi-exclamation-triangle";
+            case "building":
+                return "bi-building";
+            case "database":
+                return "bi-database";
+            case "list":
+                return "bi-journal-text";
+            case "credit-card":
+                return "bi-credit-card";
+            default:
+                return "bi-circle";
+        }
+    };
+
+    // Load admin menus when admin user changes
+    useEffect(() => {
+        if (isAdminAuthenticated) {
+            refreshAdminMenus();
+        }
+    }, [isAdminAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <aside className="sidebar p-3">
@@ -281,47 +432,29 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
 
                 {sidebarMode === "admin" && (
                     <>
-                        {/* 1. Dashboard */}
-                        <NavLink to="/admin/dashboard" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-speedometer2 me-2" /> Dashboard
-                        </NavLink>
+                        {adminMenusLoading ? (
+                            <div className="text-secondary small px-2 py-1">
+                                Loading menu...
+                            </div>
+                        ) : visibleAdminMenus.length === 0 ? (
+                            <div className="text-danger small px-2 py-1">
+                                No menu permissions found
+                            </div>
+                        ) : (
+                            visibleAdminMenus.map((m: any) => (
+                                <NavLink
+                                    key={m.Id}
+                                    to={m.Route}
+                                    className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+                                    onClick={onNav}
+                                    id={m.PageKey}
+                                >
+                                    <i className={`bi ${menuIconClass(m.Icon, m.PageName)} me-2`} />
+                                    {m.PageName}
+                                </NavLink>
+                            ))
+                        )}
                         
-                        {/* 2. Role List (Previously Add Admin / User List) */}
-                        <NavLink to="/admin/addAdmin" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-people me-2" /> Role List
-                        </NavLink>
-                        
-                        {/* 3. Privacy Notice */}
-                        <NavLink to="/admin/privacyNotices" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-file-earmark-lock2 me-2" /> Privacy Notices
-                        </NavLink>
-
-                        {/* 4. Add New Form */}
-                        <NavLink to="/admin/builder" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-ui-checks-grid me-2" /> Add New Form
-                        </NavLink>
-                        
-                        {/* 5. Form List */}
-                        <NavLink to="/admin/forms" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-list-check me-2" /> Form List
-                        </NavLink>
-                        
-                        {/* 6. Form Response */}
-                        <NavLink to="/admin/submissions" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-envelope-paper me-2" /> Form Responses
-                        </NavLink>
-
-                        {/* 7. Consent Withdraw Request */}
-                        <NavLink to="/admin/withdrawRequest" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-shield-x me-2" /> Withdraw Requests
-                        </NavLink>
-
-                        {/* 8. Grievances */}
-                        <NavLink to="/admin/grievances" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
-                            <i className="bi bi-exclamation-octagon me-2" /> Grievances
-                        </NavLink>
-
-                        {/* 9. Logout */}
                         <button className="btn btn-danger mt-4" onClick={logoutAdmin} type="button">
                             Logout
                         </button>

@@ -168,11 +168,23 @@ export default function AddAdmin() {
         // Debug: Log assigned page IDs
         console.log("Assigned page IDs:", Array.from(assignedPageIds));
 
+        // Get current admin's role to determine if they should have all permissions
+        const currentAdmin = adminList.find(admin => Number(admin.AdCode) === Number(adCode));
+        const roleName = currentAdmin?.TType?.trim().toUpperCase() ?? "";
+        const currentRole = roles.find(r => r.Role?.trim().toUpperCase() === roleName);
+        const isMainAdmin = Number(currentRole?.Id) === 1 || roleName === "MAIN ADMIN" || roleName === "SUPER ADMIN";
+        const isSubAdminRole = roleName === "SUB ADMIN" || roleName === "MAINADMIN";
+
         // Use standard menu approach - Privacy Notice and Grievances are now in the actual menu data
-        const menuPermissions = menus
+        let menuPermissions = menus
             .filter((m) => m.Status === "Y")
             .map((m) => {
                 let enabled = assignedPageIds.has(Number(m.Id));
+                
+                // Main admin gets all permissions by default, even if not explicitly assigned
+                if (isMainAdmin) {
+                    enabled = true;
+                }
                 
                 // Special handling for Privacy Notice and Grievances if API doesn't return them with expected page IDs
                 if (m.Id === 9991) { // Privacy Notice
@@ -183,7 +195,7 @@ export default function AddAdmin() {
                         x.PageName?.toLowerCase().includes("privacy") ||
                         x.Route === "/admin/privacyNotices"
                     );
-                    enabled = hasPrivacyPermission;
+                    enabled = hasPrivacyPermission || (isMainAdmin || isSubAdminRole);
                 }
                 
                 if (m.Id === 9992) { // Grievances
@@ -194,7 +206,7 @@ export default function AddAdmin() {
                         x.PageName?.toLowerCase().includes("grievance") ||
                         x.Route === "/admin/grievances"
                     );
-                    enabled = hasGrievancePermission;
+                    enabled = hasGrievancePermission || (isMainAdmin || isSubAdminRole);
                 }
                 
                 return {
@@ -206,6 +218,58 @@ export default function AddAdmin() {
                     icon: m.Icon,
                 };
             });
+
+        // Add Privacy Notice if not present in menus
+        const hasPrivacyNotice = menuPermissions.some(p => 
+            p.pageId === 9991 || 
+            p.key === "privacy_notices" ||
+            p.label?.toLowerCase().includes("privacy") ||
+            p.route === "/admin/privacyNotices"
+        );
+
+        if (!hasPrivacyNotice) {
+            const hasPrivacyPermission = assigned.some(x => 
+                x.PageId === 9991 || 
+                x.PageKey === "privacy_notices" ||
+                x.PageName?.toLowerCase().includes("privacy") ||
+                x.Route === "/admin/privacyNotices"
+            );
+            
+            menuPermissions.push({
+                pageId: 9991,
+                key: "privacy_notices",
+                label: "Privacy Notice",
+                enabled: hasPrivacyPermission,
+                route: "/admin/privacyNotices",
+                icon: "bi-shield-check",
+            });
+        }
+
+        // Add Grievances if not present in menus
+        const hasGrievances = menuPermissions.some(p => 
+            p.pageId === 9992 || 
+            p.key === "grievances" ||
+            p.label?.toLowerCase().includes("grievance") ||
+            p.route === "/admin/grievances"
+        );
+
+        if (!hasGrievances) {
+            const hasGrievancePermission = assigned.some(x => 
+                x.PageId === 9992 || 
+                x.PageKey === "grievances" ||
+                x.PageName?.toLowerCase().includes("grievance") ||
+                x.Route === "/admin/grievances"
+            );
+            
+            menuPermissions.push({
+                pageId: 9992,
+                key: "grievances",
+                label: "Grievances",
+                enabled: hasGrievancePermission,
+                route: "/admin/grievances",
+                icon: "bi-exclamation-triangle",
+            });
+        }
 
         // Debug: Log final permissions
         console.log("Final permissions set:", menuPermissions);
@@ -222,6 +286,7 @@ export default function AddAdmin() {
             roles.find((r) => Number(r.Id) === Number(roleId))?.Role?.trim().toUpperCase() ?? "";
 
         const isSubAdminRole = roleName === "SUB ADMIN" || roleName === "MAINADMIN";
+        const isMainAdmin = Number(roleId) === 1 || roleName === "MAIN ADMIN" || roleName === "SUPER ADMIN";
 
         const dashboardMenu = activeMenus.find(
             (m) =>
@@ -239,9 +304,13 @@ export default function AddAdmin() {
 
         const enabledIds = new Set<number>();
 
-        if (isSubAdminRole) {
+        // Main admin gets all permissions by default
+        if (isMainAdmin) {
+            activeMenus.forEach((m) => enabledIds.add(Number(m.Id)));
+        } else if (isSubAdminRole) {
             activeMenus.forEach((m) => enabledIds.add(Number(m.Id)));
         } else {
+            // Other roles get limited permissions
             if (dashboardMenu) enabledIds.add(Number(dashboardMenu.Id));
 
             if (Number(roleId) === 1 && consentWithdrawMenu) {
@@ -249,7 +318,8 @@ export default function AddAdmin() {
             }
         }
 
-        return activeMenus.map((m) => ({
+        // Build permissions array from menus
+        let menuPermissions = activeMenus.map((m) => ({
             pageId: m.Id,
             key: m.PageKey,
             label: m.PageName,
@@ -257,6 +327,46 @@ export default function AddAdmin() {
             route: m.Route,
             icon: m.Icon,
         }));
+
+        // Add Privacy Notice if not present in menus
+        const hasPrivacyNotice = menuPermissions.some(p => 
+            p.pageId === 9991 || 
+            p.key === "privacy_notices" ||
+            p.label?.toLowerCase().includes("privacy") ||
+            p.route === "/admin/privacyNotices"
+        );
+
+        if (!hasPrivacyNotice) {
+            menuPermissions.push({
+                pageId: 9991,
+                key: "privacy_notices",
+                label: "Privacy Notice",
+                enabled: isMainAdmin || isSubAdminRole, // Enable for main admin and sub-admin roles
+                route: "/admin/privacyNotices",
+                icon: "bi-shield-check",
+            });
+        }
+
+        // Add Grievances if not present in menus
+        const hasGrievances = menuPermissions.some(p => 
+            p.pageId === 9992 || 
+            p.key === "grievances" ||
+            p.label?.toLowerCase().includes("grievance") ||
+            p.route === "/admin/grievances"
+        );
+
+        if (!hasGrievances) {
+            menuPermissions.push({
+                pageId: 9992,
+                key: "grievances",
+                label: "Grievances",
+                enabled: isMainAdmin || isSubAdminRole, // Enable for main admin and sub-admin roles
+                route: "/admin/grievances",
+                icon: "bi-exclamation-triangle",
+            });
+        }
+
+        return menuPermissions;
     };
 
     const openCreateAdminModal = () => {
@@ -330,7 +440,7 @@ export default function AddAdmin() {
             }
 
             const prevMap = new Map(prev.map((x) => [x.pageId, x.enabled]));
-            return menus
+            let menuPermissions = menus
                 .filter((m) => m.Status === "Y")
                 .map((m) => ({
                     pageId: m.Id,
@@ -340,6 +450,46 @@ export default function AddAdmin() {
                     route: m.Route,
                     icon: m.Icon,
                 }));
+
+            // Add Privacy Notice if not present in menus
+            const hasPrivacyNotice = menuPermissions.some(p => 
+                p.pageId === 9991 || 
+                p.key === "privacy_notices" ||
+                p.label?.toLowerCase().includes("privacy") ||
+                p.route === "/admin/privacyNotices"
+            );
+
+            if (!hasPrivacyNotice) {
+                menuPermissions.push({
+                    pageId: 9991,
+                    key: "privacy_notices",
+                    label: "Privacy Notice",
+                    enabled: prevMap.get(9991) ?? false,
+                    route: "/admin/privacyNotices",
+                    icon: "bi-shield-check",
+                });
+            }
+
+            // Add Grievances if not present in menus
+            const hasGrievances = menuPermissions.some(p => 
+                p.pageId === 9992 || 
+                p.key === "grievances" ||
+                p.label?.toLowerCase().includes("grievance") ||
+                p.route === "/admin/grievances"
+            );
+
+            if (!hasGrievances) {
+                menuPermissions.push({
+                    pageId: 9992,
+                    key: "grievances",
+                    label: "Grievances",
+                    enabled: prevMap.get(9992) ?? false,
+                    route: "/admin/grievances",
+                    icon: "bi-exclamation-triangle",
+                });
+            }
+
+            return menuPermissions;
         });
     }, [menus, roles, adminForm.RoleId]);
 
@@ -399,7 +549,7 @@ export default function AddAdmin() {
 
             const prevMap = new Map(prev.map((x) => [x.pageId, x.enabled]));
 
-            return menus
+            let menuPermissions = menus
                 .filter((m) => m.Status === "Y")
                 .map((m) => ({
                     pageId: m.Id,
@@ -409,6 +559,46 @@ export default function AddAdmin() {
                     route: m.Route,
                     icon: m.Icon,
                 }));
+
+            // Add Privacy Notice if not present in menus
+            const hasPrivacyNotice = menuPermissions.some(p => 
+                p.pageId === 9991 || 
+                p.key === "privacy_notices" ||
+                p.label?.toLowerCase().includes("privacy") ||
+                p.route === "/admin/privacyNotices"
+            );
+
+            if (!hasPrivacyNotice) {
+                menuPermissions.push({
+                    pageId: 9991,
+                    key: "privacy_notices",
+                    label: "Privacy Notice",
+                    enabled: prevMap.get(9991) ?? true,
+                    route: "/admin/privacyNotices",
+                    icon: "bi-shield-check",
+                });
+            }
+
+            // Add Grievances if not present in menus
+            const hasGrievances = menuPermissions.some(p => 
+                p.pageId === 9992 || 
+                p.key === "grievances" ||
+                p.label?.toLowerCase().includes("grievance") ||
+                p.route === "/admin/grievances"
+            );
+
+            if (!hasGrievances) {
+                menuPermissions.push({
+                    pageId: 9992,
+                    key: "grievances",
+                    label: "Grievances",
+                    enabled: prevMap.get(9992) ?? true,
+                    route: "/admin/grievances",
+                    icon: "bi-exclamation-triangle",
+                });
+            }
+
+            return menuPermissions;
         });
     }, [adminForm.RoleId, menus, roles]);
 
@@ -587,10 +777,12 @@ export default function AddAdmin() {
             MenusJson: JSON.stringify(menusArray),
         };
 
-        // Only add password if creating new admin or password is provided
+        // Always include AdminPassword field - for existing admins, use current password if no new one provided
         const payload: AddUpdateAdminPayload = {
             ...basePayload,
-            AdminPassword: adminForm.AdCode === 0 ? adminForm.AdminPassword : (adminForm.AdminPassword || "DEFAULT_PASSWORD"),
+            AdminPassword: adminForm.AdCode === 0 
+                ? adminForm.AdminPassword  // New admin - use provided password
+                : adminForm.AdminPassword || "DEFAULT_PASSWORD",  // Existing admin - use provided password or default
         };
 
         try {
