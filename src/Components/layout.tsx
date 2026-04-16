@@ -212,9 +212,10 @@ const Layout: React.FC = () => {
         "/organization/organizationLogin",
         "/PublicFormView",
         "/myFormDetails",
+        "/updateandWithdrawForm",
     ];
 
-    const isStandalonePage = standalonePaths.includes(location.pathname);
+    const isStandalonePage = standalonePaths.some(path => location.pathname.startsWith(path));
 
     // ✅ Standalone pages (no sidebar/header)
     if (isStandalonePage) {
@@ -224,7 +225,6 @@ const Layout: React.FC = () => {
                 <Route path="/organization/organizationLogin" element={<OrganizationLogin />} />
                 <Route path="/PublicFormView" element={<PublicFormView />} />
                 <Route path="/myFormDetails" element={<MyFormDetails />} />
-
                 {/* ✅ page not found without sidebar */}
                 <Route
                     path="*"
@@ -376,6 +376,12 @@ const Layout: React.FC = () => {
                                     </ProtectedRoute>
                                 }
                             />                          
+                            
+                            {/* update and withdraw form route */}
+                            <Route
+                                path="/admin/updateandWithdrawForm"
+                                element={<UpdateAndWithdrawForm />}
+                            />
 
                             {/* 👉 FIXED REDIRECTS: Passes URL params and state to the new admin routes */}
                             <Route path="/forms" element={<Navigate to={{ pathname: "/admin/forms", search: location.search }} state={location.state} replace />} />
