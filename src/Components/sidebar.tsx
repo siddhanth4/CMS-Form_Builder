@@ -455,9 +455,55 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
                             ))
                         )}
                         
+<<<<<<< HEAD
+=======
+                        {/* 2. Role List (Previously Add Admin / User List) */}
+                        <NavLink to="/admin/addAdmin" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-people me-2" /> Role List
+                        </NavLink>
+                        
+                        {/* 3. Privacy Notice */}
+                        <NavLink to="/admin/privacyNotices" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-file-earmark-lock2 me-2" /> Privacy Notices
+                        </NavLink>
+
+                        {/* 4. Add New Form */}
+                        <NavLink to="/admin/builder" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-ui-checks-grid me-2" /> Add New Form
+                        </NavLink>
+                        
+                        {/* 5. Form List */}
+                        <NavLink to="/admin/forms" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-list-check me-2" /> Form List
+                        </NavLink>
+                        
+                        {/* 6. Form Response */}
+                        <NavLink to="/admin/submissions" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-envelope-paper me-2" /> Form Responses
+                        </NavLink>
+
+                        {/* 7. Consent Withdraw Request */}
+                        <NavLink to="/admin/withdrawRequest" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-shield-x me-2" /> Withdraw Requests
+                        </NavLink>
+
+                        {/* 8. Grievances */}
+                        <NavLink to="/admin/grievances" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-exclamation-octagon me-2" /> Grievances
+                        </NavLink>
+
+                        {/* 9. Update and Withdraw Form */}
+                        <NavLink to="/updateandWithdrawForm" className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onNav}>
+                            <i className="bi bi-pencil-square me-2" /> Update and Withdraw Form
+                        </NavLink>
+
+                        {/* 10. Logout */}
+>>>>>>> 72ca7e89cd2ca004cdfaf68630b15019539e27f5
                         <button className="btn btn-danger mt-4" onClick={logoutAdmin} type="button">
                             Logout
                         </button>
+                        
+
                     </>
                 )}
             </div>
