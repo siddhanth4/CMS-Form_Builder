@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { useProject } from "../Context/projectContext";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 type StatCard = {
     label: string;
@@ -24,121 +25,76 @@ const badgeClass = (b: ActivityBadge) => {
     return "badge text-bg-primary rounded-pill me-2";
 };
 
- 
+const formatRelativeTime = (dateStr: string) => {
+    if (!dateStr || dateStr === "—") return "—";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diff < 5) return "just now";
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+
+    return date.toLocaleString("en-IN");
+};
 
 const Dashboard: React.FC = () => {
-    const {
-        dashboard,
-        dashboardLoading,
-        dashboardError, 
-    } = useProject();
+    const [, setTick] = useState(0);
 
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const { dashboard, dashboardLoading, dashboardError } = useProject();
+
+    /* 🔥 INFOGRAPHIC DATA */
+    const chartData = [
+        { name: "Approved", value: dashboard?.totalApprovedActionTaken ?? 0 },
+        { name: "Rejected", value: dashboard?.totalRejectedActionTaken ?? 0 },
+        { name: "Pending", value: dashboard?.totalPendingConsentRemoveRequest ?? 0 },
+    ];
+
+    const COLORS = ["#22c55e", "#ef4444", "#facc15"];
+
+    /* EXISTING */
     const stats: StatCard[] = [
-        {
-            label: "Total Users",
-            value: dashboard?.totalUsers ?? 0,
-            note: <>All registered users</>,
-            iconClass: "bi bi-people fs-5",
-        },
-        {
-            label: "Total Forms",
-            value: dashboard?.totalForms ?? 0,
-            note: <>All available forms</>,
-            iconClass: "bi bi-ui-checks-grid fs-5",
-        },
-        {
-            label: "Total Form Responses",
-            value: dashboard?.totalFormResponse ?? 0,
-            note: <>Responses received</>,
-            iconClass: "bi bi-chat-square-text fs-5",
-        },
-        {
-            label: "Consent Remove Requests",
-            value: dashboard?.totalConsentRemoveRequest ?? 0,
-            note: <>All consent removal requests</>,
-            iconClass: "bi bi-file-earmark-minus fs-5",
-        },
-        {
-            label: "Pending Requests",
-            value: dashboard?.totalPendingConsentRemoveRequest ?? 0,
-            note: <>Awaiting action</>,
-            iconClass: "bi bi-hourglass-split fs-5",
-        },
-        {
-            label: "Action Taken",
-            value: dashboard?.totalConsentRequestActionTaken ?? 0,
-            note: <>Processed requests</>,
-            iconClass: "bi bi-check2-square fs-5",
-        },
-        {
-            label: "Approved Actions",
-            value: dashboard?.totalApprovedActionTaken ?? 0,
-            note: <>Approved consent actions</>,
-            iconClass: "bi bi-check-circle fs-5",
-        },
-        {
-            label: "Rejected Actions",
-            value: dashboard?.totalRejectedActionTaken ?? 0,
-            note: <>Rejected consent actions</>,
-            iconClass: "bi bi-x-circle fs-5",
-        },
+        { label: "Total Users", value: dashboard?.totalUsers ?? 0, note: <>All registered users</>, iconClass: "bi bi-people fs-5" },
+        { label: "Total Forms", value: dashboard?.totalForms ?? 0, note: <>All available forms</>, iconClass: "bi bi-ui-checks-grid fs-5" },
+        { label: "Total Form Responses", value: dashboard?.totalFormResponse ?? 0, note: <>Responses received</>, iconClass: "bi bi-chat-square-text fs-5" },
+        { label: "Consent Remove Requests", value: dashboard?.totalConsentRemoveRequest ?? 0, note: <>All consent removal requests</>, iconClass: "bi bi-file-earmark-minus fs-5" },
+        { label: "Pending Requests", value: dashboard?.totalPendingConsentRemoveRequest ?? 0, note: <>Awaiting action</>, iconClass: "bi bi-hourglass-split fs-5" },
+        { label: "Action Taken", value: dashboard?.totalConsentRequestActionTaken ?? 0, note: <>Processed requests</>, iconClass: "bi bi-check2-square fs-5" },
+        { label: "Approved Actions", value: dashboard?.totalApprovedActionTaken ?? 0, note: <>Approved consent actions</>, iconClass: "bi bi-check-circle fs-5" },
+        { label: "Rejected Actions", value: dashboard?.totalRejectedActionTaken ?? 0, note: <>Rejected consent actions</>, iconClass: "bi bi-x-circle fs-5" },
     ];
 
     const rows: ActivityRow[] = useMemo(() => {
         if (!dashboard?.activityLogs?.length) {
-            return [
-                {
-                    badge: "Action",
-                    text: "No recent activity available",
-                    user: "—",
-                    form: "—",
-                    time: "—",
-                },
-            ];
+            return [{ badge: "Action", text: "No recent activity available", user: "—", form: "—", time: "—" }];
         }
 
         return dashboard.activityLogs.map((item: any, index: number) => ({
             badge: "Action",
-            text:
-                item?.text ||
-                item?.activity ||
-                item?.message ||
-                `Activity ${index + 1}`,
+            text: item?.text || item?.activity || item?.message || `Activity ${index + 1}`,
             user: item?.user || item?.userName || item?.email || "—",
             form: item?.form || item?.formName || "—",
-            time: item?.time || item?.createdOn || item?.date || "—",
+            time: item?.time || item?.createdOn || item?.created_at || item?.timestamp || item?.date || "",
         }));
     }, [dashboard]);
-
-    const publishedCount = dashboard?.totalForms ?? 0;
-    const draftCount = dashboard?.totalPendingConsentRemoveRequest ?? 0;
-    const archivedCount = dashboard?.totalRejectedActionTaken ?? 0;
-
-    const totalStatus = publishedCount + draftCount + archivedCount;
-
-    const pct = (n: number) => {
-        if (totalStatus <= 0) return 0;
-        return Math.round((n / totalStatus) * 100);
-    };
-
-    const publishedPct = useMemo(() => pct(publishedCount), [publishedCount, totalStatus]);
-    const draftPct = useMemo(() => pct(draftCount), [draftCount, totalStatus]);
-    const archivedPct = useMemo(() => pct(archivedCount), [archivedCount, totalStatus]);
 
     return (
         <div className="container-fluid app-shell">
             <div className="row g-0">
+
                 {/* Header */}
                 <div className="panel mb-3">
-                    <div className="panel-head p-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
-                        <div>
-                            <div className="h5 mb-1">Admin Dashboard</div>
-                            <div className="text-secondary small">
-                                Overview of your platform metrics
-                            </div>
-                        </div>
-
-
+                    <div className="panel-head p-3">
+                        <div className="h5 mb-1">Admin Dashboard</div>
+                        <div className="text-secondary small">Overview of your platform metrics</div>
                     </div>
                 </div>
 
@@ -154,17 +110,12 @@ const Dashboard: React.FC = () => {
                     {stats.map((s) => (
                         <div key={s.label} className="col-12 col-md-6 col-xl-3">
                             <div className="stat-card h-100">
-                                <div className="d-flex align-items-start justify-content-between">
+                                <div className="d-flex justify-content-between">
                                     <div>
-                                        <div className="text-secondary small  ">{s.label}</div>
-                                        <div className="stat-value">
-                                            {dashboardLoading ? "..." : s.value}
-                                        </div>
-                                        <div className="mini-note mt-1">{s.note}</div>
+                                        <div className="text-secondary small">{s.label}</div>
+                                        <div className="stat-value">{dashboardLoading ? "..." : s.value}</div>
                                     </div>
-                                    <div className="stat-icon">
-                                        <i className={s.iconClass} />
-                                    </div>
+                                    <i className={s.iconClass} />
                                 </div>
                             </div>
                         </div>
@@ -173,151 +124,136 @@ const Dashboard: React.FC = () => {
 
                 {/* Bottom Panels */}
                 <div className="row g-3">
+
                     {/* Recent Activity */}
                     <div className="col-12 col-xl-7">
                         <div className="panel h-100">
-                            <div className="panel-head p-3 d-flex align-items-center justify-content-between">
+                            <div className="panel-head p-3 d-flex justify-content-between">
                                 <div className="fw-bold">Recent Activity</div>
-                                <span className="badge badge-soft rounded-pill">Live</span>
+                                <span className="badge badge-soft">Live</span>
                             </div>
 
-                            <div className="p-3">
-                                <div className="table-responsive">
-                                    <table className="table align-middle mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th style={{ minWidth: 220 }}>Event</th>
-                                                <th>User</th>
-                                                <th>Form</th>
-                                                <th className="text-end">Time</th>
+                            <div className="p-3" style={{ maxHeight: 500, overflowY: "auto" }}>
+                                <table className="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Event</th>
+                                            <th>User</th>
+                                            <th>Form</th>
+                                            <th className="text-end">Time</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {rows.map((r, i) => (
+                                            <tr key={i}>
+                                                <td>
+                                                    <span className={badgeClass(r.badge)}>{r.badge}</span>
+                                                    {r.text}
+                                                </td>
+                                                <td>{r.user}</td>
+                                                <td>{r.form}</td>
+                                                <td className="text-end" title={r.time}>
+                                                    {formatRelativeTime(r.time)}
+                                                </td>
                                             </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            {rows.map((r, idx) => (
-                                                <tr key={idx}>
-                                                    <td>
-                                                        <span className={badgeClass(r.badge)}>{r.badge}</span>
-                                                        {r.text}
-                                                    </td>
-                                                    <td className="text-secondary">{r.user}</td>
-                                                    <td className={r.form === "—" ? "text-secondary" : "fw-semibold"}>
-                                                        {r.form}
-                                                    </td>
-                                                    <td className="text-end text-secondary">{r.time}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    {/* Status Breakdown */}
+                    {/* 🔥 INFOGRAPHIC (REPLACES STATUS BREAKDOWN) */}
                     <div className="col-12 col-xl-5">
-                        <div className="panel h-100">
-                            <div className="panel-head p-3 d-flex align-items-center justify-content-between">
-                                <div className="fw-bold">Status Breakdown</div>
-                                <span className="badge badge-soft rounded-pill">Summary</span>
+                        <div className="panel h-100 p-3">
+
+                            <div className="fw-bold mb-3">Analytics Overview</div>
+
+                            <div style={{ height: 260 }}>
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData}
+                                            dataKey="value"
+                                            innerRadius={70}
+                                            outerRadius={100}
+                                            paddingAngle={4}
+                                        >
+                                            {chartData.map((_, i) => (
+                                                <Cell key={i} fill={COLORS[i]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
 
-                            <div className="p-3">
-                                <div className="d-flex align-items-center justify-content-between mb-2">
-                                    <div className="text-secondary">Total Forms</div>
-                                    <div className="fw-semibold">{publishedCount}</div>
-                                </div>
-                                <div className="progress mb-3" role="progressbar" aria-label="Total Forms percent">
-                                    <div className="progress-bar" style={{ width: `${publishedPct}%` }} />
-                                </div>
-
-                                <div className="d-flex align-items-center justify-content-between mb-2">
-                                    <div className="text-secondary">Pending Requests</div>
-                                    <div className="fw-semibold">{draftCount}</div>
-                                </div>
-                                <div className="progress mb-3" role="progressbar" aria-label="Pending Requests percent">
-                                    <div className="progress-bar" style={{ width: `${draftPct}%` }} />
-                                </div>
-
-                                <div className="d-flex align-items-center justify-content-between mb-2">
-                                    <div className="text-secondary">Rejected Actions</div>
-                                    <div className="fw-semibold">{archivedCount}</div>
-                                </div>
-                                <div className="progress" role="progressbar" aria-label="Rejected Actions percent">
-                                    <div className="progress-bar" style={{ width: `${archivedPct}%` }} />
-                                </div>
-
-                                <div className="mini-note mt-3">
-                                    This section is using dashboard API summary values.
-                                </div>
+                            {/* Legend */}
+                            <div className="mt-3">
+                                {chartData.map((item, i) => (
+                                    <div key={i} className="d-flex justify-content-between mb-2">
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span style={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: "50%",
+                                                background: COLORS[i]
+                                            }} />
+                                            <span className="text-secondary">{item.name}</span>
+                                        </div>
+                                        <span className="fw-semibold">{item.value}</span>
+                                    </div>
+                                ))}
                             </div>
+
                         </div>
                     </div>
+
                 </div>
 
-                {/* Extra Info Cards same design */}
+                {/* 🔥 KEEP THIS PART UNCHANGED */}
+                {/* Extra Info Cards */}
                 <div className="row g-3 mt-1">
                     <div className="col-12 col-md-6 col-xl-4">
                         <div className="stat-card h-100">
-                            <div className="d-flex align-items-start justify-content-between">
-                                <div>
-                                    <div className="text-secondary small font700">Role ID</div>
-                                    <div className="stat-value">{dashboard?.roleId ?? 0}</div>
-                                    <div className="mini-note mt-1">Current admin role</div>
-                                </div>
-                                <div className="stat-icon">
-                                    <i className="bi bi-person-badge fs-5" />
-                                </div>
+                            <div>
+                                <div className="text-secondary small font700">Role ID</div>
+                                <div className="stat-value">{dashboard?.roleId ?? 0}</div>
+                                <div className="mini-note mt-1">Current admin role</div>
                             </div>
                         </div>
                     </div>
 
                     <div className="col-12 col-md-6 col-xl-4">
                         <div className="stat-card h-100">
-                            <div className="d-flex align-items-start justify-content-between">
-                                <div>
-                                    <div className="text-secondary small font700">Approval Rate</div>
-                                    <div className="stat-value">
-                                        {dashboard && dashboard.totalConsentRequestActionTaken > 0
-                                            ? `${Math.round(
-                                                (dashboard.totalApprovedActionTaken /
-                                                    dashboard.totalConsentRequestActionTaken) *
-                                                100
-                                            )}%`
-                                            : "0%"}
-                                    </div>
-                                    <div className="mini-note mt-1">Approved out of total actions</div>
+                            <div>
+                                <div className="text-secondary small font700">Approval Rate</div>
+                                <div className="stat-value">
+                                    {dashboard && dashboard.totalConsentRequestActionTaken > 0
+                                        ? `${Math.round((dashboard.totalApprovedActionTaken / dashboard.totalConsentRequestActionTaken) * 100)}%`
+                                        : "0%"}
                                 </div>
-                                <div className="stat-icon">
-                                    <i className="bi bi-graph-up-arrow fs-5" />
-                                </div>
+                                <div className="mini-note mt-1">Approved out of total actions</div>
                             </div>
                         </div>
                     </div>
 
                     <div className="col-12 col-md-6 col-xl-4">
                         <div className="stat-card h-100">
-                            <div className="d-flex align-items-start justify-content-between">
-                                <div>
-                                    <div className="text-secondary small font700">Rejection Rate</div>
-                                    <div className="stat-value">
-                                        {dashboard && dashboard.totalConsentRequestActionTaken > 0
-                                            ? `${Math.round(
-                                                (dashboard.totalRejectedActionTaken /
-                                                    dashboard.totalConsentRequestActionTaken) *
-                                                100
-                                            )}%`
-                                            : "0%"}
-                                    </div>
-                                    <div className="mini-note mt-1">Rejected out of total actions</div>
+                            <div>
+                                <div className="text-secondary small font700">Rejection Rate</div>
+                                <div className="stat-value">
+                                    {dashboard && dashboard.totalConsentRequestActionTaken > 0
+                                        ? `${Math.round((dashboard.totalRejectedActionTaken / dashboard.totalConsentRequestActionTaken) * 100)}%`
+                                        : "0%"}
                                 </div>
-                                <div className="stat-icon">
-                                    <i className="bi bi-graph-down-arrow fs-5" />
-                                </div>
+                                <div className="mini-note mt-1">Rejected out of total actions</div>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );

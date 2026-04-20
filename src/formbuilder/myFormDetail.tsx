@@ -1161,6 +1161,16 @@
  *   POST /api/Home/SendOTPMail                           ← OTP for auth
  */
 
+/**
+ * src/formbuilder/myFormDetail.tsx
+ *
+ * PUBLIC standalone page for users to:
+ *   1. View their previously submitted form data (pre-filled)
+ *   2. Update their data  →  POST /api/Home/updateFormResponse
+ *   3. Send Consent Withdrawal Request  →  POST /api/Home/addConsentRemoveRequest
+ *   4. Submit a Grievance  →  POST /api/Grievance/Submit
+ */
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PopupAlert } from "../Components/alert";
@@ -1168,7 +1178,9 @@ import { getFormResponseByResponseId } from "../Api/getFormResponseByResponseId"
 import { updateFormResponseData }       from "../Api/updateFormResponse";
 import { addConsentRemoveRequest }       from "../Api/addRemoveConsentRequest";
 import { sendOtpMail }                  from "../Api/sendMailOtp";
+import { submitGrievance }              from "../Api/grievance";
 import type { FormResponseByResponseIdParsed } from "../Api/getFormResponseByResponseId";
+import type { GrievanceType }           from "../Api/grievance";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -1196,6 +1208,19 @@ type FormResponseSchema = {
     id?: string; meta?: Meta; fields?: BuilderField[];
     createdAt?: string; updatedAt?: string; submittedAt?: string;
 };
+
+/* ─── Grievance issue types ──────────────────────────────────────── */
+
+const GRIEVANCE_ISSUE_TYPES: GrievanceType[] = [
+    "Data Access Request",
+    "Data Correction Request",
+    "Data Deletion / Erasure",
+    "Consent Withdrawal",
+    "Data Breach Concern",
+    "Unauthorised Processing",
+    "Data Portability",
+    "Other",
+];
 
 /* ─── Validation ─────────────────────────────────────────────────── */
 
@@ -1322,25 +1347,24 @@ const renderField = (
 
 const MyFormDetails: React.FC = () => {
     const [searchParams] = useSearchParams();
-    // Supports both ?id= and ?responseId=
     const responseId = Number(searchParams.get("id") || searchParams.get("responseId"));
 
     /* ── Data fetching state ──────────────────────────────────────── */
-    const [record, setRecord]         = useState<FormResponseByResponseIdParsed | null>(null);
+    const [record, setRecord]           = useState<FormResponseByResponseIdParsed | null>(null);
     const [dataLoading, setDataLoading] = useState(true);
     const [dataError, setDataError]     = useState("");
 
-    /* ── Public IP (for update payload) ──────────────────────────── */
+    /* ── Public IP ────────────────────────────────────────────────── */
     const [publicIP, setPublicIP] = useState("0.0.0.0");
 
     /* ── Form state ───────────────────────────────────────────────── */
-    const [values, setValues]           = useState<Record<string, any>>({});
+    const [values, setValues]               = useState<Record<string, any>>({});
     const [initialValues, setInitialValues] = useState<Record<string, any>>({});
-    const [submitted, setSubmitted]     = useState(false);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-    const [touched, setTouched]         = useState<Record<string, boolean>>({});
+    const [submitted, setSubmitted]         = useState(false);
+    const [fieldErrors, setFieldErrors]     = useState<Record<string, string>>({});
+    const [touched, setTouched]             = useState<Record<string, boolean>>({});
 
-    /* ── OTP state ────────────────────────────────────────────────── */
+    /* ── OTP / Consent state ──────────────────────────────────────── */
     const [consentTruth, setConsentTruth] = useState(false);
     const [consentDpdp,  setConsentDpdp]  = useState(false);
     const [otpServer,    setOtpServer]    = useState("");
@@ -1348,18 +1372,29 @@ const MyFormDetails: React.FC = () => {
     const [otpSent,      setOtpSent]      = useState(false);
     const [otpSending,   setOtpSending]   = useState(false);
 
-    /* ── Modals / alerts ──────────────────────────────────────────── */
+    /* ── Update confirm modal ─────────────────────────────────────── */
     const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
+
+    /* ── Consent Withdraw modal ───────────────────────────────────── */
     const [consentModalOpen,  setConsentModalOpen]  = useState(false);
     const [consentRemark,     setConsentRemark]     = useState("");
     const [consentRemarkErr,  setConsentRemarkErr]  = useState("");
     const [consentLoading,    setConsentLoading]    = useState(false);
 
-    const [successOpen, setSuccessOpen] = useState(false);
+    /* ── Grievance modal ─────────────────────────────────────────── */
+    const [grievanceModalOpen,      setGrievanceModalOpen]      = useState(false);
+    const [grievanceIssueType,      setGrievanceIssueType]      = useState<GrievanceType>("Other");
+    const [grievanceDescription,    setGrievanceDescription]    = useState("");
+    const [grievanceDescErr,        setGrievanceDescErr]        = useState("");
+    const [grievanceIssueTypeErr,   setGrievanceIssueTypeErr]   = useState("");
+    const [grievanceLoading,        setGrievanceLoading]        = useState(false);
+
+    /* ── Alerts ───────────────────────────────────────────────────── */
+    const [successOpen,  setSuccessOpen]  = useState(false);
     const [successTitle, setSuccessTitle] = useState("Success");
-    const [successMsg,  setSuccessMsg]  = useState("");
-    const [dangerOpen,  setDangerOpen]  = useState(false);
-    const [dangerMsg,   setDangerMsg]   = useState("Something went wrong!");
+    const [successMsg,   setSuccessMsg]   = useState("");
+    const [dangerOpen,   setDangerOpen]   = useState(false);
+    const [dangerMsg,    setDangerMsg]    = useState("Something went wrong!");
 
     const year = useMemo(() => new Date().getFullYear(), []);
 
@@ -1371,15 +1406,13 @@ const MyFormDetails: React.FC = () => {
             .catch(() => {});
     }, []);
 
-    /* ── Step 1: Fetch response data by responseId ────────────────── */
+    /* ── Fetch response data ──────────────────────────────────────── */
     useEffect(() => {
         if (!responseId || isNaN(responseId)) return;
-
         const load = async () => {
             setDataLoading(true);
             setDataError("");
             try {
-                // GET /api/Form/getFormResponseById?Id={responseId}
                 const data = await getFormResponseByResponseId(responseId);
                 if (!data) { setDataError("No response found for this ID."); return; }
                 setRecord(data);
@@ -1389,33 +1422,25 @@ const MyFormDetails: React.FC = () => {
                 setDataLoading(false);
             }
         };
-
         load();
     }, [responseId]);
 
-    /* ── Step 2: Parse FormResponse and pre-fill values ──────────── */
+    /* ── Parse schema ─────────────────────────────────────────────── */
     const schema: FormResponseSchema | null = record?.FormResponse as FormResponseSchema ?? null;
     const fields: BuilderField[]            = schema?.fields ?? [];
     const meta: Meta                        = schema?.meta   ?? {};
     const formId                            = record?.FormId ?? 0;
 
+    /* ── Pre-fill values ──────────────────────────────────────────── */
     useEffect(() => {
         if (!fields.length) return;
-
         const init: Record<string, any> = {};
         for (const f of fields) {
-            // ← Use stored value from the DB response (pre-fill)
-            if (f.value !== undefined && f.value !== null) {
-                init[f.id] = f.value;
-            } else if (f.type === "checkbox") {
-                init[f.id] = [];
-            } else if (f.type === "terms") {
-                init[f.id] = false;
-            } else {
-                init[f.id] = "";
-            }
+            if (f.value !== undefined && f.value !== null) init[f.id] = f.value;
+            else if (f.type === "checkbox") init[f.id] = [];
+            else if (f.type === "terms") init[f.id] = false;
+            else init[f.id] = "";
         }
-
         setValues(init);
         setInitialValues(init);
         setSubmitted(false);
@@ -1428,7 +1453,7 @@ const MyFormDetails: React.FC = () => {
         setOtpSent(false);
     }, [record, fields.length]);
 
-    /* ── Validation ───────────────────────────────────────────────── */
+    /* ── Validation helpers ───────────────────────────────────────── */
     const validateAll = () => {
         const e: Record<string, string> = {};
         for (const f of fields) { const m = validateField(f, values[f.id]); if (m) e[f.id] = m; }
@@ -1443,7 +1468,6 @@ const MyFormDetails: React.FC = () => {
         setFieldErrors((p) => ({ ...p, [f.id]: validateField(f, values[f.id]) }));
         setTouched((p) => ({ ...p, [f.id]: true }));
     };
-
     const resetForm = () => {
         setValues(initialValues);
         setSubmitted(false); setFieldErrors({}); setTouched({});
@@ -1456,10 +1480,19 @@ const MyFormDetails: React.FC = () => {
         let email = "", mobile = "";
         for (const f of fields) {
             const v = values[f.id];
-            if (!email  && (f.type === "email" || /email/i.test(f.id)  || /email/i.test(f.label)))  { if (typeof v === "string") email  = v.trim(); }
-            if (!mobile && (f.type === "phone" || /mobile/i.test(f.id) || /phone/i.test(f.id) || /mobile/i.test(f.label) || /phone/i.test(f.label))) { if (typeof v === "string") mobile = v.trim(); }
+            if (!email  && (f.type === "email"  || /email/i.test(f.id)  || /email/i.test(f.label)))  { if (typeof v === "string") email  = v.trim(); }
+            if (!mobile && (f.type === "phone"  || /mobile/i.test(f.id) || /phone/i.test(f.id) || /mobile/i.test(f.label) || /phone/i.test(f.label))) { if (typeof v === "string") mobile = v.trim(); }
         }
         return { email, mobile };
+    };
+
+    /* Extract user name from fields for grievance payload */
+    const extractUserName = () => {
+        for (const f of fields) {
+            const v = values[f.id];
+            if (typeof v === "string" && v.trim() && /name/i.test(f.label)) return v.trim();
+        }
+        return "User";
     };
 
     /* ── OTP ──────────────────────────────────────────────────────── */
@@ -1477,9 +1510,9 @@ const MyFormDetails: React.FC = () => {
             setOtpSending(false);
         }
     };
-    const otpOk     = otpServer.length === 6 && otpInput.trim() === otpServer;
-    const canUpdate = consentTruth && consentDpdp && otpOk;
-    const canWithdraw = otpOk;   // OTP required for consent withdraw too
+    const otpOk       = otpServer.length === 6 && otpInput.trim() === otpServer;
+    const canUpdate   = consentTruth && consentDpdp && otpOk;
+    const canWithdraw = otpOk;
 
     /* ── Submit (update) form ─────────────────────────────────────── */
     const onSubmit = (e: React.FormEvent) => {
@@ -1510,26 +1543,16 @@ const MyFormDetails: React.FC = () => {
                 updatedAt:   new Date().toISOString(),
                 submittedAt: new Date().toISOString(),
             };
-
-            // POST /api/Home/updateFormResponse
             const res = await updateFormResponseData({
-                ResponseId: responseId,
-                FormId:     formId,
-                IPAddress:  publicIP,
-                Status:     "Y",
-                FormResponse: payload,
-                MobileNo: mobile,
-                EmailId:  email,
+                ResponseId: responseId, FormId: formId,
+                IPAddress: publicIP, Status: "Y",
+                FormResponse: payload, MobileNo: mobile, EmailId: email,
             });
-
             if (res?.responseCode !== 101) throw new Error(res?.responseMessage || "Update failed");
-
             setConfirmUpdateOpen(false);
             setSuccessTitle("Updated!");
             setSuccessMsg("Your form data has been updated successfully.");
             setSuccessOpen(true);
-
-            // Refresh data
             const fresh = await getFormResponseByResponseId(responseId);
             if (fresh) setRecord(fresh);
         } catch (err: any) {
@@ -1544,22 +1567,13 @@ const MyFormDetails: React.FC = () => {
         setConsentRemark(""); setConsentRemarkErr("");
         setConsentModalOpen(true);
     };
-
     const submitConsentWithdraw = async () => {
         const remark = consentRemark.trim();
         if (!remark) { setConsentRemarkErr("Please enter a reason for withdrawal."); return; }
-
         try {
             setConsentLoading(true);
-
-            // POST /api/Home/addConsentRemoveRequest
-            const res = await addConsentRemoveRequest({
-                ResponseId: responseId,
-                ConsentRemovalRemark: remark,
-            });
-
+            const res = await addConsentRemoveRequest({ ResponseId: responseId, ConsentRemovalRemark: remark });
             if (res?.responseCode !== 101) throw new Error(res?.responseMessage || "Request failed");
-
             setConsentModalOpen(false);
             setSuccessTitle("Request Submitted");
             setSuccessMsg("Your consent withdrawal request has been submitted. The Data Fiduciary will process it under DPDP Act, 2023.");
@@ -1573,6 +1587,121 @@ const MyFormDetails: React.FC = () => {
         }
     };
 
+    /* ── Grievance ────────────────────────────────────────────────── */
+    const openGrievanceModal = () => {
+        setGrievanceIssueType("Other");
+        setGrievanceDescription("");
+        setGrievanceDescErr("");
+        setGrievanceIssueTypeErr("");
+        setGrievanceModalOpen(true);
+    };
+
+    // const submitGrievanceHandler = async () => {
+    //     let valid = true;
+    //     if (!grievanceIssueType) {
+    //         setGrievanceIssueTypeErr("Please select an issue type.");
+    //         valid = false;
+    //     } else {
+    //         setGrievanceIssueTypeErr("");
+    //     }
+    //     if (!grievanceDescription.trim()) {
+    //         setGrievanceDescErr("Please describe your issue.");
+    //         valid = false;
+    //     } else {
+    //         setGrievanceDescErr("");
+    //     }
+    //     if (!valid) return;
+
+    //     try {
+    //         setGrievanceLoading(true);
+    //         const { email, mobile } = extractEmailMobile();
+    //         const userName = extractUserName();
+
+    //         await submitGrievance({
+    //             ConsentId:        `CNS-${responseId}`,
+    //             UserName:         userName,
+    //             UserEmail:        email,
+    //             UserMobile:       mobile,
+    //             IssueType:        grievanceIssueType,
+    //             IssueDescription: grievanceDescription.trim(),
+    //             Priority:         "Medium",
+    //             FormId:           formId,
+    //         });
+
+    //         setGrievanceModalOpen(false);
+    //         setSuccessTitle("Grievance Submitted");
+    //         setSuccessMsg("Your grievance has been submitted. Our team will review it and respond to your registered email address.");
+    //         setSuccessOpen(true);
+    //     } catch (err: any) {
+    //         setGrievanceModalOpen(false);
+    //         setDangerMsg(err?.message || "Failed to submit grievance");
+    //         setDangerOpen(true);
+    //     } finally {
+    //         setGrievanceLoading(false);
+    //     }
+    // };
+
+    const submitGrievanceHandler = async () => {
+    let valid = true;
+
+    if (!grievanceIssueType) {
+        setGrievanceIssueTypeErr("Please select an issue type.");
+        valid = false;
+    } else {
+        setGrievanceIssueTypeErr("");
+    }
+
+    if (!grievanceDescription.trim()) {
+        setGrievanceDescErr("Please describe your issue.");
+        valid = false;
+    } else {
+        setGrievanceDescErr("");
+    }
+
+    if (!valid) return;
+
+    try {
+        setGrievanceLoading(true);
+
+        const { email, mobile } = extractEmailMobile();
+        const userName = extractUserName();
+
+        const result = await submitGrievance({
+            ConsentId: `CNS-${responseId}`,
+            UserName: userName,
+            UserEmail: email,
+            UserMobile: mobile,
+            IssueType: grievanceIssueType,
+            IssueDescription: grievanceDescription.trim(),
+            Priority: "Medium",
+            FormId: formId,
+        });
+
+        console.log("Grievance Response:", result);
+
+        setGrievanceModalOpen(false);
+
+        setSuccessTitle("Grievance Submitted");
+        setSuccessMsg(
+            "Your grievance has been submitted successfully. We will contact you via email."
+        );
+        setSuccessOpen(true);
+
+    } catch (err: unknown) {
+        setGrievanceModalOpen(false);
+
+        if (err instanceof Error) {
+            setDangerMsg(err.message);
+        } else {
+            setDangerMsg("Failed to submit grievance");
+        }
+
+        setDangerOpen(true);
+    } finally {
+        setGrievanceLoading(false);
+    }
+};
+
     /* ── Guard states ─────────────────────────────────────────────── */
     if (!responseId || isNaN(responseId)) {
         return (
@@ -1580,7 +1709,7 @@ const MyFormDetails: React.FC = () => {
                 <div className="text-center p-4">
                     <i className="bi bi-exclamation-triangle-fill text-warning mb-3 d-block" style={{ fontSize: 40 }} />
                     <h5 className="text-white">Invalid Link</h5>
-                    <p className="text-secondary">This link is missing a valid response ID. Please use the link provided to you.</p>
+                    <p className="text-secondary">This link is missing a valid response ID.</p>
                 </div>
             </div>
         );
@@ -1617,6 +1746,14 @@ const MyFormDetails: React.FC = () => {
         );
     }
 
+    /* ─── Shared modal backdrop style ────────────────────────────── */
+    const backdropStyle: React.CSSProperties = { zIndex: 1050 };
+    const modalStyle:    React.CSSProperties = { zIndex: 1055 };
+    const modalContentBase: React.CSSProperties = {
+        background: "#11131a",
+        borderRadius: 14,
+    };
+
     /* ── Render ───────────────────────────────────────────────────── */
     return (
         <>
@@ -1637,7 +1774,7 @@ const MyFormDetails: React.FC = () => {
                         </span>
                     </div>
 
-                    {/* Info chip — response metadata */}
+                    {/* Info chips */}
                     <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
                         <span style={{ background: "rgba(79,110,247,0.1)", border: "1px solid rgba(79,110,247,0.2)", color: "#7c9ff7", borderRadius: 6, padding: "4px 12px", fontSize: 12 }}>
                             <i className="bi bi-fingerprint me-1" />Response #{responseId}
@@ -1666,16 +1803,16 @@ const MyFormDetails: React.FC = () => {
                             <div className="fw-bold text-white fs-4 mb-1">{meta.title ?? "My Form"}</div>
                             {meta.subtitle && <div style={{ fontSize: ".9rem", color: "#94a3b8" }}>{meta.subtitle}</div>}
 
-                            {/* DPDP notice strip */}
+                            {/* DPDP notice */}
                             <div className="mt-3 p-3 d-flex align-items-start gap-2" style={{ background: "rgba(79,110,247,0.07)", borderRadius: 10, border: "1px solid rgba(79,110,247,0.15)" }}>
                                 <i className="bi bi-info-circle text-primary mt-1 flex-shrink-0" />
                                 <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>
-                                    Your previously submitted data is shown below. You may <strong className="text-white">update your information</strong> or submit a <strong className="text-white">Consent Withdrawal Request</strong> under the Digital Personal Data Protection Act, 2023 (Section 12 & 13).
+                                    Your previously submitted data is shown below. You may <strong className="text-white">update your information</strong>, submit a <strong className="text-white">Consent Withdrawal Request</strong>, or raise a <strong className="text-white">Grievance</strong> under the Digital Personal Data Protection Act, 2023.
                                 </div>
                             </div>
                         </div>
 
-                        {/* Card body — form */}
+                        {/* Card body */}
                         <div className="card-body p-4 p-md-5 text-white">
                             <form noValidate onSubmit={onSubmit}>
                                 <div className="row g-4">
@@ -1685,7 +1822,6 @@ const MyFormDetails: React.FC = () => {
                                         const err     = fieldErrors[f.id] || "";
                                         const showErr = !!err && (submitted || touched[f.id]);
                                         const desc    = (f.description ?? "").trim();
-
                                         return (
                                             <div key={f.id} className="col-12">
                                                 <div className="row g-3 align-items-start">
@@ -1750,21 +1886,45 @@ const MyFormDetails: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <button type="button" className="btn btn-sm text-nowrap" style={{ background: "rgba(79,110,247,0.1)", border: "1px solid rgba(79,110,247,0.2)", color: "#7c9ff7" }} onClick={sendOtp} disabled={otpSending}>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm text-nowrap"
+                                                    style={{ background: "rgba(79,110,247,0.1)", border: "1px solid rgba(79,110,247,0.2)", color: "#7c9ff7" }}
+                                                    onClick={sendOtp}
+                                                    disabled={otpSending}
+                                                >
                                                     {otpSending ? <><span className="spinner-border spinner-border-sm me-2" />Sending…</> : otpSent ? "Resend OTP" : "Send OTP"}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Action buttons */}
+                                    {/* ── Action buttons ──────────────────────────────── */}
                                     <div className="col-12 mt-2 pt-4 d-flex flex-wrap gap-3 align-items-center justify-content-between" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                                         <div className="d-none d-md-block text-secondary small">
                                             <i className="bi bi-pencil-square me-1" />Review your data before updating
                                         </div>
 
                                         <div className="d-flex flex-wrap gap-2 ms-auto">
-                                            {/* Consent Withdraw */}
+
+                                            {/* ── Grievance button ── */}
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm px-3"
+                                                style={{
+                                                    background: "rgba(255,193,7,0.1)",
+                                                    border: "1px solid rgba(255,193,7,0.3)",
+                                                    color: "#ffc107",
+                                                    borderRadius: 8,
+                                                }}
+                                                onClick={openGrievanceModal}
+                                                title="Raise a grievance about your data"
+                                            >
+                                                <i className="bi bi-exclamation-triangle me-1" />
+                                                Grievance
+                                            </button>
+
+                                            {/* ── Consent Withdraw ── */}
                                             <button
                                                 type="button"
                                                 className="btn btn-sm px-3"
@@ -1777,13 +1937,24 @@ const MyFormDetails: React.FC = () => {
                                                 {consentLoading ? "Processing…" : "Withdraw Consent"}
                                             </button>
 
-                                            {/* Reset */}
-                                            <button type="button" className="btn btn-sm px-3" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 8 }} onClick={resetForm}>
+                                            {/* ── Reset ── */}
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm px-3"
+                                                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", borderRadius: 8 }}
+                                                onClick={resetForm}
+                                            >
                                                 Reset
                                             </button>
 
-                                            {/* Update */}
-                                            <button type="submit" className="btn btn-sm px-4 fw-bold d-flex align-items-center gap-2" style={{ background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8 }} disabled={!canUpdate} title={!canUpdate ? "Accept consent and verify OTP to update" : ""}>
+                                            {/* ── Update ── */}
+                                            <button
+                                                type="submit"
+                                                className="btn btn-sm px-4 fw-bold d-flex align-items-center gap-2"
+                                                style={{ background: "#4f6ef7", color: "#fff", border: "none", borderRadius: 8 }}
+                                                disabled={!canUpdate}
+                                                title={!canUpdate ? "Accept consent and verify OTP to update" : ""}
+                                            >
                                                 <i className="bi bi-arrow-repeat" />Update Info
                                             </button>
                                         </div>
@@ -1800,7 +1971,9 @@ const MyFormDetails: React.FC = () => {
                 </div>
             </div>
 
-            {/* ── Confirm Update popup ──────────────────────────────── */}
+            {/* ══════════════════════════════════════════════════════
+                CONFIRM UPDATE POPUP
+            ══════════════════════════════════════════════════════ */}
             <PopupAlert
                 open={confirmUpdateOpen}
                 type="warning"
@@ -1812,13 +1985,15 @@ const MyFormDetails: React.FC = () => {
                 onCancel={() => setConfirmUpdateOpen(false)}
             />
 
-            {/* ── Consent Withdraw Modal ────────────────────────────── */}
+            {/* ══════════════════════════════════════════════════════
+                CONSENT WITHDRAW MODAL
+            ══════════════════════════════════════════════════════ */}
             {consentModalOpen && (
                 <>
-                    <div className="modal-backdrop fade show" style={{ zIndex: 1050 }} />
-                    <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true" style={{ zIndex: 1055 }}>
+                    <div className="modal-backdrop fade show" style={backdropStyle} />
+                    <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true" style={modalStyle}>
                         <div className="modal-dialog modal-dialog-centered" role="document" style={{ maxWidth: 480 }}>
-                            <div className="modal-content" style={{ background: "#11131a", border: "1px solid rgba(220,53,69,0.25)", borderRadius: 14 }}>
+                            <div className="modal-content" style={{ ...modalContentBase, border: "1px solid rgba(220,53,69,0.25)" }}>
 
                                 <div className="modal-header" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(220,53,69,0.06)" }}>
                                     <h5 className="modal-title d-flex align-items-center gap-2 text-white">
@@ -1840,13 +2015,12 @@ const MyFormDetails: React.FC = () => {
                                     <textarea
                                         className={`form-control ${consentRemarkErr ? "is-invalid" : ""}`}
                                         rows={4}
-                                        placeholder="Please explain why you wish to withdraw your consent (e.g., data no longer needed, incorrect data, etc.)..."
+                                        placeholder="Please explain why you wish to withdraw your consent..."
                                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f8f9fa", resize: "vertical" }}
                                         value={consentRemark}
                                         onChange={(e) => { setConsentRemark(e.target.value); if (e.target.value.trim()) setConsentRemarkErr(""); }}
                                     />
                                     {consentRemarkErr && <div className="invalid-feedback d-block">{consentRemarkErr}</div>}
-
                                     <div className="mt-2" style={{ fontSize: 12, color: "#6c757d" }}>
                                         <i className="bi bi-clock me-1" />Requests are typically processed within 30 days.
                                     </div>
@@ -1864,8 +2038,123 @@ const MyFormDetails: React.FC = () => {
                 </>
             )}
 
+            {/* ══════════════════════════════════════════════════════
+                GRIEVANCE MODAL
+            ══════════════════════════════════════════════════════ */}
+            {grievanceModalOpen && (
+                <>
+                    <div className="modal-backdrop fade show" style={backdropStyle} />
+                    <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true" style={modalStyle}>
+                        <div className="modal-dialog modal-dialog-centered" role="document" style={{ maxWidth: 520 }}>
+                            <div className="modal-content" style={{ ...modalContentBase, border: "1px solid rgba(255,193,7,0.25)" }}>
+
+                                {/* Header */}
+                                <div className="modal-header" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,193,7,0.06)" }}>
+                                    <h5 className="modal-title d-flex align-items-center gap-2 text-white">
+                                        <i className="bi bi-exclamation-triangle text-warning" />
+                                        Raise a Grievance
+                                    </h5>
+                                    <button
+                                        type="button"
+                                        className="btn-close btn-close-white"
+                                        onClick={() => { if (!grievanceLoading) setGrievanceModalOpen(false); }}
+                                    />
+                                </div>
+
+                                {/* Body */}
+                                <div className="modal-body p-4">
+
+                                    {/* Info strip */}
+                                    <div className="mb-4 p-3" style={{ background: "rgba(255,193,7,0.07)", borderRadius: 8, border: "1px solid rgba(255,193,7,0.15)", fontSize: 13, color: "#fff3cd" }}>
+                                        <i className="bi bi-info-circle me-2" />
+                                        Under <strong>Section 13 of the DPDP Act, 2023</strong>, you have the right to file a grievance with the Data Fiduciary. Our team will review your grievance and respond to your registered email address.
+                                    </div>
+
+                                    {/* Issue Type */}
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold text-light">
+                                            Issue Type <span className="text-danger">*</span>
+                                        </label>
+                                        <select
+                                            className={`form-select ${grievanceIssueTypeErr ? "is-invalid" : ""}`}
+                                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f8f9fa" }}
+                                            value={grievanceIssueType}
+                                            onChange={(e) => {
+                                                setGrievanceIssueType(e.target.value as GrievanceType);
+                                                if (e.target.value) setGrievanceIssueTypeErr("");
+                                            }}
+                                        >
+                                            <option value="" style={{ color: "#000" }}>Select issue type...</option>
+                                            {GRIEVANCE_ISSUE_TYPES.map((t) => (
+                                                <option key={t} value={t} style={{ color: "#000" }}>{t}</option>
+                                            ))}
+                                        </select>
+                                        {grievanceIssueTypeErr && (
+                                            <div className="invalid-feedback d-block">{grievanceIssueTypeErr}</div>
+                                        )}
+                                    </div>
+
+                                    {/* Description */}
+                                    <div className="mb-2">
+                                        <label className="form-label fw-semibold text-light">
+                                            Describe Your Issue <span className="text-danger">*</span>
+                                        </label>
+                                        <textarea
+                                            className={`form-control ${grievanceDescErr ? "is-invalid" : ""}`}
+                                            rows={5}
+                                            placeholder="Please describe your grievance in detail. Include relevant dates, form names, or any other information that will help us resolve your issue promptly..."
+                                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f8f9fa", resize: "vertical", fontSize: 13 }}
+                                            value={grievanceDescription}
+                                            onChange={(e) => {
+                                                setGrievanceDescription(e.target.value);
+                                                if (e.target.value.trim()) setGrievanceDescErr("");
+                                            }}
+                                        />
+                                        {grievanceDescErr && (
+                                            <div className="invalid-feedback d-block">{grievanceDescErr}</div>
+                                        )}
+                                        <div className="mt-1" style={{ fontSize: 11, color: "#6c757d" }}>
+                                            {grievanceDescription.length} characters
+                                        </div>
+                                    </div>
+
+                                    {/* Response info */}
+                                    <div className="mt-3 d-flex align-items-center gap-2" style={{ fontSize: 12, color: "#6c757d" }}>
+                                        <i className="bi bi-envelope me-1" />
+                                        A resolution will be emailed to: <strong style={{ color: "#adb5bd" }}>{record?.EmailId || "your registered email"}</strong>
+                                    </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="modal-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-secondary px-4"
+                                        onClick={() => { if (!grievanceLoading) setGrievanceModalOpen(false); }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm px-4"
+                                        style={{ background: "#ffc107", border: "none", color: "#000", fontWeight: 600 }}
+                                        onClick={submitGrievanceHandler}
+                                        disabled={grievanceLoading}
+                                    >
+                                        {grievanceLoading
+                                            ? <><span className="spinner-border spinner-border-sm me-2" />Submitting…</>
+                                            : <><i className="bi bi-send me-1" />Submit Grievance</>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* ── Alerts ────────────────────────────────────────────── */}
-            <PopupAlert open={successOpen} type="success" title={successTitle} message={successMsg} onClose={() => setSuccessOpen(false)} autoCloseMs={3000} />
+            <PopupAlert open={successOpen} type="success" title={successTitle} message={successMsg} onClose={() => setSuccessOpen(false)} autoCloseMs={3500} />
             <PopupAlert open={dangerOpen}  type="danger"  title="Error"         message={dangerMsg}  onClose={() => setDangerOpen(false)}  autoCloseMs={3000} />
         </>
     );

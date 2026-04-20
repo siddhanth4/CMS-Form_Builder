@@ -40,3 +40,11 @@
 .read-the-docs {
   color: #888;
 }
+/* add in css */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 10px;
+}
