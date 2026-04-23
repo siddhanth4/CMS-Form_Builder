@@ -5,12 +5,16 @@
   --soft: rgba(124, 92, 255, 0.14);
   --card: color-mix(in oklab, var(--bs-body-bg) 92%, transparent 8%);
 }
+
 html[data-bs-theme="light"] {
-  --stroke: rgba(0, 0, 0, 0.1);
-  --soft: rgba(124, 92, 255, 0.1);
-  --card: color-mix(in oklab, var(--bs-body-bg) 96%, transparent 4%);
+  --brand:  #4f46e5;
+  --brand2: #7c3aed;
+  --stroke: rgba(99, 102, 241, 0.18);
+  --soft:   rgba(79, 70, 229, 0.10);
+  --card:   rgba(235, 239, 252, 0.92);
 }
 
+/* ─── Dark body ────────────────────────────────── */
 body {
   min-height: 100vh;
   background:
@@ -34,6 +38,18 @@ body {
   justify-content: center !important;
 }
 
+/* ─── PREMIUM LIGHT body — frosted indigo slate ── */
+html[data-bs-theme="light"] body {
+  background:
+    radial-gradient(ellipse 1000px 700px at 8% 0%,
+      rgba(99,102,241,0.22), transparent 58%),
+    radial-gradient(ellipse 800px 600px at 92% 8%,
+      rgba(139,92,246,0.14), transparent 55%),
+    radial-gradient(ellipse 900px 700px at 50% 100%,
+      rgba(79,70,229,0.10), transparent 55%),
+    linear-gradient(145deg, #dde3f2 0%, #e2e7f4 40%, #eaecf6 100%);
+}
+
 .wrap {
   width: 100%;
   max-width: 980px;
@@ -41,6 +57,7 @@ body {
   padding: 26px 14px 60px;
 }
 
+/* ─── Glass card ───────────────────────────────── */
 .glass {
   border: 1px solid var(--stroke);
   background: var(--card);
@@ -50,6 +67,14 @@ body {
   overflow: hidden;
 }
 
+html[data-bs-theme="light"] .glass {
+  box-shadow:
+    0 20px 60px rgba(79, 70, 229, 0.14),
+    0 4px 16px rgba(0,0,0,0.06);
+  border-color: rgba(99, 102, 241, 0.20);
+}
+
+/* ─── Decorative side panel ────────────────────── */
 .side {
   position: relative;
   background: linear-gradient(
@@ -60,6 +85,17 @@ body {
   border-right: 1px solid var(--stroke);
   min-height: 100%;
 }
+
+html[data-bs-theme="light"] .side {
+  background: linear-gradient(
+    135deg,
+    rgba(99,102,241,0.14) 0%,
+    rgba(139,92,246,0.10) 60%,
+    rgba(79,70,229,0.08) 100%
+  );
+  border-right-color: rgba(99, 102, 241, 0.18);
+}
+
 .side:before {
   content: "";
   position: absolute;
@@ -75,6 +111,15 @@ body {
   border-radius: 50%;
   filter: blur(2px);
 }
+
+html[data-bs-theme="light"] .side:before {
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(79, 70, 229, 0.28),
+    transparent 60%
+  );
+}
+
 .side:after {
   content: "";
   position: absolute;
@@ -91,6 +136,15 @@ body {
   filter: blur(2px);
 }
 
+html[data-bs-theme="light"] .side:after {
+  background: radial-gradient(
+    circle at 40% 40%,
+    rgba(139, 92, 246, 0.22),
+    transparent 60%
+  );
+}
+
+/* ─── Brand badge ──────────────────────────────── */
 .brand {
   width: 46px;
   height: 46px;
@@ -104,6 +158,11 @@ body {
   flex: 0 0 auto;
 }
 
+html[data-bs-theme="light"] .brand {
+  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.36);
+}
+
+/* ─── Pill chip ────────────────────────────────── */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -118,12 +177,32 @@ body {
   z-index: 1;
 }
 
+html[data-bs-theme="light"] .pill {
+  background: color-mix(in oklab, #dde3f2 85%, transparent 15%);
+  color: #3d4a6b;
+  border-color: rgba(99, 102, 241, 0.22);
+}
+
+/* ─── Form controls ────────────────────────────── */
 .form-control,
 .form-select {
   border-radius: 14px;
   border-color: var(--stroke);
   background: color-mix(in oklab, var(--bs-body-bg) 92%, transparent 8%);
 }
+
+html[data-bs-theme="light"] .form-control,
+html[data-bs-theme="light"] .form-select {
+  background: rgba(226, 231, 250, 0.55);
+  border-color: rgba(99, 102, 241, 0.22);
+  color: #1a1f36;
+}
+
+html[data-bs-theme="light"] .form-control::placeholder,
+html[data-bs-theme="light"] .form-select::placeholder {
+  color: #8a96b8;
+}
+
 .form-control:focus,
 .form-select:focus {
   border-color: color-mix(in oklab, var(--brand) 70%, var(--stroke) 30%);
@@ -131,32 +210,86 @@ body {
     color-mix(in oklab, var(--brand) 20%, transparent 80%);
 }
 
+html[data-bs-theme="light"] .form-control:focus,
+html[data-bs-theme="light"] .form-select:focus {
+  background: rgba(238, 240, 255, 0.90);
+  border-color: rgba(79, 70, 229, 0.52);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+}
+
+/* ─── Brand button ─────────────────────────────── */
 .btn-brand {
   background: var(--brand);
   border-color: var(--brand);
   border-radius: 14px;
 }
+
+html[data-bs-theme="light"] .btn-brand {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(79,70,229,0.30);
+  color: #fff;
+}
+
 .btn-brand:hover {
   background: color-mix(in oklab, var(--brand) 86%, black 14%);
   border-color: color-mix(in oklab, var(--brand) 86%, black 14%);
 }
 
+html[data-bs-theme="light"] .btn-brand:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 22px rgba(79,70,229,0.36);
+}
+
+/* ─── Misc ─────────────────────────────────────── */
 .req {
   color: var(--bs-danger);
   font-weight: 800;
 }
+
 .mini-note {
   font-size: 12px;
   color: var(--bs-secondary-color);
 }
+
+html[data-bs-theme="light"] .mini-note {
+  color: #5a6a8a;
+}
+
 .divider {
   height: 1px;
   background: var(--stroke);
   margin: 16px 0;
 }
 
-/* Small “show password” button look */
+/* Small "show password" button look */
 .icon-btn {
   border-radius: 0 14px 14px 0;
   border-color: var(--stroke);
+}
+
+html[data-bs-theme="light"] .icon-btn {
+  background: rgba(218, 223, 248, 0.60);
+  color: #3d4a6b;
+  border-color: rgba(99, 102, 241, 0.22);
+}
+
+/* ─── Text color helpers in light ──────────────── */
+html[data-bs-theme="light"] h1,
+html[data-bs-theme="light"] h2,
+html[data-bs-theme="light"] h3,
+html[data-bs-theme="light"] h4,
+html[data-bs-theme="light"] h5,
+html[data-bs-theme="light"] h6 {
+  color: #1a1f36;
+}
+
+html[data-bs-theme="light"] p,
+html[data-bs-theme="light"] small,
+html[data-bs-theme="light"] .text-muted {
+  color: #5a6a8a !important;
+}
+
+html[data-bs-theme="light"] .text-primary {
+  color: #4f46e5 !important;
 }

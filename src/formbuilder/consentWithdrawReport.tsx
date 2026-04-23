@@ -313,30 +313,31 @@ export default function ConsentWithdrawRequest() {
         }
     };
 
-    const tableRows = useMemo(() => {
-        return consentRemoveRequests.map((r) => {
-            const consentBadge = getConsentBadge(r.Consent);
-            const resolvedBadge = getResolvedBadge(r.ConsentResolved);
+const tableRows = useMemo(() => {
+    return consentRemoveRequests.map((r) => {
+        const consentBadge = getConsentBadge(r.Consent);
+        const resolvedBadge = getResolvedBadge(r.ConsentResolved);
 
-            const summary = getUserName(r, String(r.Id));
+        const summary = getUserName(r, String(r.Id));
 
-            return {
-                key: r.Id,
-                id: r.Id,
-                formId: r.FormId,
-                summary,
-                email: r.EmailId,
-                mobile: r.MobileNo,
-                ipAddress: r.IPAddress,
-                created: formatDate(r.CreatedOn),
-                consentText: consentBadge.text,
-                consentClass: consentBadge.className,
-                resolvedText: resolvedBadge.text,
-                resolvedClass: resolvedBadge.className,
-                raw: r,
-            };
-        });
-    }, [consentRemoveRequests]);
+        return {
+            key: r.Id,
+            id: r.Id, 
+            formId: r.FormId,
+            summary,
+            email: r.EmailId,
+            mobile: r.MobileNo,
+            created: formatDate(r.CreatedOn),
+
+            consentText: consentBadge.text,
+            consentClass: consentBadge.className,
+            resolvedText: resolvedBadge.text,
+            resolvedClass: resolvedBadge.className,
+
+            raw: r,
+        };
+    });
+}, [consentRemoveRequests]);
 
     return (
         <>
@@ -465,8 +466,13 @@ export default function ConsentWithdrawRequest() {
                                                 <tr key={row.key}>
                                                     <td>
                                                         <div className="fw-semibold">{row.summary}</div>
+
                                                         <div className="text-secondary small">
-                                                            Form ID: {row.formId} • IP: {safeString(row.ipAddress)}
+                                                            Response ID: {row.id}
+                                                        </div>
+
+                                                        <div className="text-secondary small">
+                                                            Form ID: {row.formId}
                                                         </div>
                                                     </td>
 

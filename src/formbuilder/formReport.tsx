@@ -299,6 +299,43 @@ export default function FormsPage() {
         }
     };
 
+
+const exportFormsCSV = () => {
+    if (!tableRows.length) return;
+
+    const headers = [
+        "Form ID",
+        "Title",
+        "Subtitle",
+        "Status",
+        "Created",
+        "Submissions"
+    ];
+
+    const csvContent = [
+        headers.join(","),
+
+        ...tableRows.map(f => [
+            f.id,
+            `"${f.title}"`,
+            `"${f.subtitle}"`,
+            f.status,
+            f.created,
+            f.submissions
+        ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "forms_list.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
+};
+
     return (
         <>
             <div className="container-fluid app-shell">
@@ -315,7 +352,7 @@ export default function FormsPage() {
                                 <button
                                     className="btn btn-outline-secondary btn-sm"
                                     type="button"
-                                    onClick={() => console.log("Export")}
+                                    onClick={exportFormsCSV}
                                 >
                                     <i className="bi bi-download" /> Export
                                 </button>
@@ -424,8 +461,16 @@ export default function FormsPage() {
                                         {initialized && !loading && !error && tableRows.map((f) => (
                                             <tr key={f.key}>
                                                 <td>
-                                                    <div className="fw-semibold">{f.title}</div>
-                                                    <div className="text-secondary small">{f.subtitle}</div>
+                                                    <div className="fw-semibold d-flex align-items-center gap-2">
+                                                        {f.title}
+                                                        <span className="badge badge-soft rounded-pill">
+                                                            ID: {f.id}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="text-secondary small">
+                                                        {f.subtitle}
+                                                    </div>
                                                 </td>
 
                                                 <td>

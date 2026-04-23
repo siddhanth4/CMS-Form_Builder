@@ -152,6 +152,51 @@ export default function AllFormReport() {
         return rows;
     }, [search, range, sort]);
 
+
+
+    // ADD THIS FUNCTION inside component (above return)
+
+const exportCSV = () => {
+    const rows = filteredSorted;
+
+    if (!rows.length) return;
+
+    const headers = [
+        "Submission ID",
+        "Full Name",
+        "Email",
+        "Phone",
+        "Submitted",
+        "Status",
+        "Notes"
+    ];
+
+    const csvContent = [
+        headers.join(","),
+
+        ...rows.map(r => [
+            r.id,
+            `"${r.fullName}"`,
+            r.email,
+            r.phone || "",
+            r.submitted,
+            r.status,
+            `"${r.notes || ""}"`
+        ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${formName.replace(/\s+/g, "_")}_submissions.csv`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+};
+    
+
     return (
         <>
             <div className="container-fluid app-shell">
@@ -172,7 +217,7 @@ export default function AllFormReport() {
                                 <button
                                     className="btn btn-outline-secondary btn-sm"
                                     type="button"
-                                    onClick={() => console.log("Export CSV")}
+                                    onClick={exportCSV}
                                 >
                                     <i className="bi bi-download" /> Export CSV
                                 </button>
