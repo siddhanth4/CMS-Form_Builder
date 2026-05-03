@@ -641,7 +641,7 @@ export default function AddAdmin() {
                     <div className="panel mb-3">
                         <div className="panel-head p-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
                             <div>
-                                <div className="h5 mb-1">Admin</div>
+                                <div className="h5 mb-1">Roles</div>
                             </div>
 
                             <div className="d-flex gap-2 align-items-center">
@@ -654,7 +654,7 @@ export default function AddAdmin() {
                                 </button>
 
                                 <button className="btn btn-outline-secondary btn-sm" type="button" onClick={openCreateAdminModal}>
-                                    <i className="bi bi-person-plus" /> Add Admin
+                                    <i className="bi bi-person-plus" /> Add Admin Role
                                 </button>
                             </div>
                         </div>
@@ -714,7 +714,7 @@ export default function AddAdmin() {
 
                     <div className="panel">
                         <div className="panel-head p-3 d-flex align-items-center justify-content-between">
-                            <div className="fw-bold">Admin List</div>
+                            <div className="fw-bold">Admin Role List</div>
                             <span className="badge badge-soft rounded-pill">Total: {adminsTotal}</span>
                         </div>
 
@@ -727,7 +727,7 @@ export default function AddAdmin() {
                                             <th>Username</th>
                                             <th>Mobile</th>
                                             <th>Email</th>
-                                            <th>Type</th>
+                                            <th>Role</th>
                                             <th>Status</th>
                                             <th className="text-end" style={{ minWidth: 240 }}>
                                                 Actions
@@ -852,9 +852,9 @@ export default function AddAdmin() {
                         <div className="modal-header" style={{ borderBottom: "1px solid var(--stroke)" }}>
                             <div className="d-flex align-items-center gap-2">
                                 <h5 className="modal-title mb-0">
-                                    {adminForm.AdCode === 0 ? "Add User" : "Update User"}
+                                    {adminForm.AdCode === 0 ? "Add Role" : "Update User"}
                                 </h5>
-                                <span className="badge rounded-pill text-bg-secondary">Admin</span>
+                                <span className="badge rounded-pill text-bg-secondary"></span>
                             </div>
 
                             <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
@@ -874,7 +874,7 @@ export default function AddAdmin() {
                                             onClick={() => setActiveTab("details")}
                                         >
                                             <i className="bi bi-person-lines-fill me-2" />
-                                            Admin Details
+                                             Details
                                         </button>
                                     </li>
 
@@ -912,7 +912,7 @@ export default function AddAdmin() {
                                     aria-labelledby="tab-user-details"
                                 >
                                     <div className="px-3 px-md-4 py-3 d-flex align-items-center justify-content-between">
-                                        <div className="fw-bold">Admin Details</div>
+                                        <div className="fw-bold">Role Details</div>
                                     </div>
                                     <div style={{ borderTop: "1px solid var(--stroke)" }} />
 
