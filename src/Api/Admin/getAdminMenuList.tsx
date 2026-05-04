@@ -1,4 +1,4 @@
-// src/Api/Admin/getAdminMenus.ts
+// src/Api/Admin/getAdminMenus.tsx
 
 export type AdminMenusParams = {
     adCode?: number | string; // optional (if not passed, will use localStorage)

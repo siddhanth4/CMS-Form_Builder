@@ -62,14 +62,14 @@ const Dashboard: React.FC = () => {
 
     /* EXISTING */
     const stats: StatCard[] = [
-        { label: "Total Users", value: dashboard?.totalUsers ?? 0, note: <>All registered users</>, iconClass: "bi bi-people fs-5" },
-        { label: "Total Forms", value: dashboard?.totalForms ?? 0, note: <>All available forms</>, iconClass: "bi bi-ui-checks-grid fs-5" },
+        { label: "Total Assigned Roles", value: dashboard?.totalUsers ?? 0, note: <>All registered users</>, iconClass: "bi bi-people fs-5" },
+        { label: "Total Created Forms", value: dashboard?.totalForms ?? 0, note: <>All available forms</>, iconClass: "bi bi-ui-checks-grid fs-5" },
         { label: "Total Form Responses", value: dashboard?.totalFormResponse ?? 0, note: <>Responses received</>, iconClass: "bi bi-chat-square-text fs-5" },
         { label: "Consent Remove Requests", value: dashboard?.totalConsentRemoveRequest ?? 0, note: <>All consent removal requests</>, iconClass: "bi bi-file-earmark-minus fs-5" },
-        { label: "Pending Requests", value: dashboard?.totalPendingConsentRemoveRequest ?? 0, note: <>Awaiting action</>, iconClass: "bi bi-hourglass-split fs-5" },
+        { label: "Pending Withdraw Requests", value: dashboard?.totalPendingConsentRemoveRequest ?? 0, note: <>Awaiting action</>, iconClass: "bi bi-hourglass-split fs-5" },
         { label: "Action Taken", value: dashboard?.totalConsentRequestActionTaken ?? 0, note: <>Processed requests</>, iconClass: "bi bi-check2-square fs-5" },
-        { label: "Approved Actions", value: dashboard?.totalApprovedActionTaken ?? 0, note: <>Approved consent actions</>, iconClass: "bi bi-check-circle fs-5" },
-        { label: "Rejected Actions", value: dashboard?.totalRejectedActionTaken ?? 0, note: <>Rejected consent actions</>, iconClass: "bi bi-x-circle fs-5" },
+        { label: "Approved Withdraw Requests", value: dashboard?.totalApprovedActionTaken ?? 0, note: <>Approved consent actions</>, iconClass: "bi bi-check-circle fs-5" },
+        { label: "Rejected Withdraw Requests", value: dashboard?.totalRejectedActionTaken ?? 0, note: <>Rejected consent actions</>, iconClass: "bi bi-x-circle fs-5" },
     ];
 
     const rows: ActivityRow[] = useMemo(() => {
