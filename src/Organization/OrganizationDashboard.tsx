@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { getAdminDashboard } from "../Api/Admin/getDashboardDetails";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 
 type StatCard = {
@@ -176,20 +176,23 @@ export default function Dashboard({
 
                                 <div style={{ height: 260 }}>
                                     <ResponsiveContainer>
-                                        <PieChart>
-                                            <Pie
-                                                data={chartData}
-                                                dataKey="value"
-                                                innerRadius={70}
-                                                outerRadius={100}
-                                                paddingAngle={4}
-                                            >
+                                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis 
+                                                dataKey="name" 
+                                                tick={{ fontSize: 12 }}
+                                                angle={-45}
+                                                textAnchor="end"
+                                                height={60}
+                                            />
+                                            <YAxis tick={{ fontSize: 12 }} />
+                                            <Tooltip />
+                                            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                                                 {chartData.map((_, i) => (
                                                     <Cell key={i} fill={COLORS[i]} />
                                                 ))}
-                                            </Pie>
-                                            <Tooltip />
-                                        </PieChart>
+                                            </Bar>
+                                        </BarChart>
                                     </ResponsiveContainer>
                                 </div>
 
