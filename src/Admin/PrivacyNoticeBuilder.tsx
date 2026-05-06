@@ -1406,22 +1406,22 @@ interface PrivacyNoticeForm {
     noticeName: string; organizationName: string; effectiveDate: string; version: string; language: string; sections: NoticeSection[];
 }
 
-const PURPOSE_OPTIONS = ["Service Provision & Account Management", "Communication & Customer Support", "Analytics & Service Improvement", "Personalization", "AI/ML Training & Research", "Marketing & Promotional Activities", "Security, Fraud Prevention & Legal Compliance"];
-const DATA_CATEGORIES_OPTIONS = ["Identity Information", "Contact Information", "Government Identification Details", "Financial & Payment Information", "Technical & Device Information", "Usage & Behavioral Data", "User-Provided Content & Documents", "Professional / Educational Information", "Communication Data", "Third-Party / Integrated Data", "Sensitive Personal Data"];
+const PURPOSE_OPTIONS = ["Service Provision & Account Management (Provide services, create/manage accounts, process requests)", "Communication & Customer Support (Send updates, notifications, and handle user queries)", "Analytics & Service Improvement (Analyze usage, improve features, optimize performance)", "Personalization (Customize content, recommendations, and user experience)", "AI/ML Training & Research (Train models, develop new features, innovation)", "Marketing & Promotional Activities (Send offers, advertisements, product updates)", "Security, Fraud Prevention & Legal Compliance (Protect platform, detect fraud, comply with laws, enforce policies)"];
+const DATA_CATEGORIES_OPTIONS = ["Identity Information (Name, username, gender, date of birth)", "Contact Information (Email, mobile number, address)", "Government Identification Details (Aadhaar, PAN, passport, driving license)", "Financial & Payment Information (Bank details, UPI ID, transactions, billing info)", "Technical & Device Information (IP address, device type, browser, system logs)", "Usage & Behavioral Data (Activity, preferences, interaction patterns)", "User-Provided Content & Documents (Form inputs, uploaded files, feedback, messages)", "Professional / Educational Information (Job details, company, education, resume)", "Communication Data (Emails, chats, support tickets, call records)", "Third-Party / Integrated Data (Social media data, partner-provided data)", "Sensitive Personal Data (Biometric, health, financial credentials, other sensitive info)"];
 const LEGAL_BASIS_OPTIONS = ["Consent of the Data Principal", "Compliance with legal obligations", "Performance of a contract", "Legitimate uses (as per DPDP Act)", "Prevention of fraud / security purposes"];
 const DATA_SUBJECT_RIGHTS_OPTIONS = ["Right to Access Information", "Right to Correction & Update", "Right to Erasure (Deletion)", "Right to Withdraw Consent", "Right to Grievance Redressal", "Right to Nominate"];
 
 const DEFAULT_SECTIONS: NoticeSection[] = [
-    { key: "dataController", title: "Data Controller / Fiduciary Information", icon: "bi-building", placeholder: "Enter details about the organization acting as Data Fiduciary...", required: true, content: "", enabled: true },
-    { key: "purposeOfProcessing", title: "Purpose of Processing Personal Data", icon: "bi-bullseye", placeholder: "Clearly describe the specific, explicit, and legitimate purposes...", required: true, content: "", enabled: true },
-    { key: "dataCategories", title: "Categories of Personal Data Collected", icon: "bi-collection", placeholder: "List the types of personal data that will be collected...", required: true, content: "", enabled: true },
-    { key: "legalBasis", title: "Legal Basis for Processing", icon: "bi-shield-check", placeholder: "Specify the legal basis under Section 4 of the DPDP Act...", required: true, content: "", enabled: true },
-    { key: "retentionPeriod", title: "Data Retention Period", icon: "bi-clock-history", placeholder: "Specify how long personal data will be retained...", required: true, content: "", enabled: true },
-    { key: "dataSharing", title: "Data Sharing & Third-Party Transfers", icon: "bi-share", placeholder: "Disclose if personal data is shared with Data Processors...", required: false, content: "", enabled: true },
-    { key: "dataSubjectRights", title: "Rights of the Data Principal", icon: "bi-person-check", placeholder: "Describe the rights available under Chapter III of the DPDP Act...", required: true, content: "", enabled: true },
-    { key: "contactDPO", title: "Contact – Data Protection Officer", icon: "bi-person-badge", placeholder: "Provide contact details of the Data Protection Officer...", required: false, content: "", enabled: false },
-    { key: "grievanceOfficer", title: "Grievance Redressal Officer", icon: "bi-headset", placeholder: "Provide contact details of the Grievance Officer...", required: true, content: "", enabled: true },
-    { key: "policyUpdates", title: "Changes to This Privacy Notice", icon: "bi-arrow-repeat", placeholder: "Explain how and when Data Principals will be notified...", required: false, content: "", enabled: true },
+    { key: "dataController", title: "Data Controller / Fiduciary Information", icon: "bi-building", placeholder: "Enter details about the organization acting as Data Fiduciary under the DPDP Act, 2023. Include registered name, address, and contact information.", required: true, content: "", enabled: true },
+    { key: "purposeOfProcessing", title: "Purpose of Processing Personal Data", icon: "bi-bullseye", placeholder: "Clearly describe the specific, explicit, and legitimate purposes for which personal data is collected and processed. Each purpose must be lawful under the DPDP Act.", required: true, content: "", enabled: true },
+    { key: "dataCategories", title: "Categories of Personal Data Collected", icon: "bi-collection", placeholder: "List the types of personal data that will be collected (e.g., name, email, Aadhaar number, health data, financial data). Indicate if any sensitive personal data is included.", required: true, content: "", enabled: true },
+    { key: "legalBasis", title: "Legal Basis for Processing", icon: "bi-shield-check", placeholder: "Specify the legal basis under Section 4 of the DPDP Act, 2023. E.g., Consent of the Data Principal, performance of a contract, compliance with legal obligation, etc.", required: true, content: "", enabled: true },
+    { key: "retentionPeriod", title: "Data Retention Period", icon: "bi-clock-history", placeholder: "Specify how long personal data will be retained and the criteria used to determine retention periods. Include data erasure obligations under Section 8(7) of the DPDP Act.", required: true, content: "", enabled: true },
+    { key: "dataSharing", title: "Data Sharing & Third-Party Transfers", icon: "bi-share", placeholder: "Disclose if personal data is shared with Data Processors or third parties. Mention cross-border transfers if applicable and safeguards in place.", required: false, content: "", enabled: true },
+    { key: "dataSubjectRights", title: "Rights of the Data Principal", icon: "bi-person-check", placeholder: "Describe the rights available under Chapter III of the DPDP Act: Right to Access, Right to Correction, Right to Erasure, Right to Grievance Redressal, Right to Nominate, and Right to Withdraw Consent.", required: true, content: "", enabled: true },
+    { key: "contactDPO", title: "Contact – Data Protection Officer", icon: "bi-person-badge", placeholder: "Provide name, email, and contact details of the Data Protection Officer (if appointed) or the designated contact person for data protection queries.", required: false, content: "", enabled: false },
+    { key: "grievanceOfficer", title: "Grievance Redressal Officer", icon: "bi-headset", placeholder: "Provide contact details of the Grievance Officer and the process to raise a complaint. Include escalation to the Data Protection Board of India if unresolved.", required: true, content: "", enabled: true },
+    { key: "policyUpdates", title: "Changes to This Privacy Notice", icon: "bi-arrow-repeat", placeholder: "Explain how and when Data Principals will be notified of material changes to this privacy notice. Include the effective date mechanism.", required: false, content: "", enabled: true },
 ];
 
 const LANGUAGE_OPTIONS = [{ value: "en", label: "English" }, { value: "hi", label: "Hindi (हिन्दी)" }, { value: "mr", label: "Marathi (मराठी)" }, { value: "ta", label: "Tamil (தமிழ்)" }, { value: "te", label: "Telugu (తెలుగు)" }, { value: "bn", label: "Bengali (বাংলা)" }, { value: "gu", label: "Gujarati (ગુજરાતી)" }, { value: "kn", label: "Kannada (ಕನ್ನಡ)" }];
@@ -1501,7 +1501,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
         noticeName: "", organizationName: "", effectiveDate: "", version: "1.0", language: "en", sections: DEFAULT_SECTIONS,
     });
 
-    // 🔥 FIX: Scans the invisible string tag to resurrect the Draft properly
+    // Rehydrate Draft State
     useEffect(() => {
         if (editData) {
             const html = editData.notice || editData.Notice || "";
@@ -1530,7 +1530,6 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
     const step1Valid = form.noticeName.trim() && form.organizationName.trim() && form.effectiveDate && form.version.trim();
     const draftValid = form.noticeName.trim().length > 0;
 
-    // 🔥 FIX: Encodes everything inside an INVISIBLE text node instead of an HTML attribute so the backend cannot erase it
     const generateHTML = (isDraft: boolean) => {
         const stateBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(form))));
         const statusVal = isDraft ? "Draft" : "Published";
@@ -1561,36 +1560,21 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
         try {
             const htmlFormat = generateHTML(isDraft);
             const statusStr = isDraft ? "Draft" : "Published";
-
-            // Grab the target ID safely as an Integer
             const targetId = editId && !isNaN(Number(editId)) ? Number(editId) : 0;
 
-            // 🔥 FIX: Provides the Id to the backend in EVERY possible property so it strictly Updates rather than duplicated
             const payload: any = {
-                FormID: "0",
-                Notice: htmlFormat,
-                Status: statusStr,
-                status: statusStr, 
-                NoticeName: form.noticeName,
-                noticeName: form.noticeName
+                FormID: "0", Notice: htmlFormat, Status: statusStr, status: statusStr, NoticeName: form.noticeName, noticeName: form.noticeName
             };
 
             if (targetId > 0) {
-                payload.Id = targetId;
-                payload.id = targetId;
-                payload.NoticeId = targetId;
-                payload.noticeId = targetId;
+                payload.Id = targetId; payload.id = targetId; payload.NoticeId = targetId; payload.noticeId = targetId;
             }
 
-            console.log("Sending payload to backend to ensure UPDATE:", payload);
-
             const res = await addNotice(payload);
-            
             if (res && res.responseCode && res.responseCode !== 101) {
                 alert(`Backend rejected the save: ${res.responseMessage}`);
                 return;
             }
-
             setSaved(true);
             setTimeout(() => {
                 setSaved(false);
@@ -1612,25 +1596,25 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
             </div>
             <div className="col-md-6">
                 <label className="form-label small fw-semibold">Notice Name <span className="text-danger">*</span></label>
-                <input className="form-control" placeholder="e.g., Customer Onboarding Privacy Notice" value={form.noticeName} onChange={(e) => updateMeta("noticeName", e.target.value)} />
+                <input className="form-control w-100" placeholder="e.g., Customer Onboarding Privacy Notice" value={form.noticeName} onChange={(e) => updateMeta("noticeName", e.target.value)} />
             </div>
             <div className="col-md-6">
                 <label className="form-label small fw-semibold">Organization / Data Fiduciary Name <span className="text-danger">*</span></label>
-                <input className="form-control" placeholder="e.g., NJ Softtech Pvt. Ltd." value={form.organizationName} onChange={(e) => updateMeta("organizationName", e.target.value)} />
+                <input className="form-control w-100" placeholder="e.g., NJ Softtech Pvt. Ltd." value={form.organizationName} onChange={(e) => updateMeta("organizationName", e.target.value)} />
             </div>
             <div className="col-md-4">
                 <label className="form-label small fw-semibold">Effective Date <span className="text-danger">*</span></label>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker value={form.effectiveDate ? dayjs(form.effectiveDate) : null} onChange={(newValue) => updateMeta("effectiveDate", newValue ? newValue.format("YYYY-MM-DD") : "")} slotProps={{ textField: { className: "form-control", size: "small" } }} />
+                    <DatePicker value={form.effectiveDate ? dayjs(form.effectiveDate) : null} onChange={(newValue) => updateMeta("effectiveDate", newValue ? newValue.format("YYYY-MM-DD") : "")} slotProps={{ textField: { className: "form-control w-100", size: "small" } }} />
                 </LocalizationProvider>
             </div>
             <div className="col-md-4">
                 <label className="form-label small fw-semibold">Version <span className="text-danger">*</span></label>
-                <input className="form-control" placeholder="1.0" value={form.version} onChange={(e) => updateMeta("version", e.target.value)} />
+                <input className="form-control w-100" placeholder="1.0" value={form.version} onChange={(e) => updateMeta("version", e.target.value)} />
             </div>
             <div className="col-md-4">
                 <label className="form-label small fw-semibold">Notice Language</label>
-                <select className="form-select" value={form.language} onChange={(e) => updateMeta("language", e.target.value)}>
+                <select className="form-select w-100" value={form.language} onChange={(e) => updateMeta("language", e.target.value)}>
                     {LANGUAGE_OPTIONS.map((l) => (
                         <option key={l.value} value={l.value}>{l.label}</option>
                     ))}
@@ -1639,11 +1623,15 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
         </div>
     );
 
+    // 🔥 FIX: Adjusted column ratios (col-xl-3 / col-xl-9) and w-100 classes 
+    // to force full width without altering ANY colors or inner UI
     const renderStep2 = () => {
         const active = form.sections.find((s) => s.key === activeSection);
         return (
-            <div className="row g-0" style={{ minHeight: 480 }}>
-                <div className="col-12 col-md-4" style={{ borderRight: "1px solid rgba(255, 255, 255, 0)", paddingRight: 0 }}>
+            <div className="row g-0 w-100" style={{ minHeight: 500 }}>
+                
+                {/* SIDEBAR RATIO: from col-md-4 to col-12 col-md-4 col-xl-3 */}
+                <div className="col-12 col-md-4 col-xl-3" style={{ borderRight: "1px solid rgba(255, 255, 255, 0.05)", paddingRight: 0 }}>
                     <div className="p-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                         <div className="d-flex justify-content-between align-items-center">
                             <span className="small fw-semibold">Sections</span>
@@ -1681,9 +1669,10 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                     </div>
                 </div>
 
-                <div className="col-12 col-md-8 p-4">
+                {/* EDITOR RATIO: from col-md-8 p-4 to col-12 col-md-8 col-xl-9 p-4 */}
+                <div className="col-12 col-md-8 col-xl-9 p-4">
                     {!active ? (
-                        <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center" style={{ minHeight: 300, color: "var(--bs-secondary-color)" }}>
+                        <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center w-100" style={{ minHeight: 300, color: "var(--bs-secondary-color)" }}>
                             <i className="bi bi-cursor-text mb-3" style={{ fontSize: 40, opacity: 0.3 }} />
                             <div className="fw-semibold">Select a section to edit</div>
                             <div className="small mt-1">Click any section on the left to start writing</div>
@@ -1706,7 +1695,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                             </div>
 
                             {active.key === "purposeOfProcessing" ? (
-                                <div>
+                                <div className="w-100">
                                     {PURPOSE_OPTIONS.map((purpose, index) => {
                                         const selected = active.content.split("\n").includes(purpose);
                                         return (
@@ -1723,7 +1712,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                     })}
                                 </div>
                             ) : active.key === "dataCategories" ? (
-                                <div>
+                                <div className="w-100">
                                     {DATA_CATEGORIES_OPTIONS.map((category, index) => {
                                         const selected = active.content.split("\n").includes(category);
                                         return (
@@ -1740,7 +1729,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                     })}
                                 </div>
                             ) : active.key === "legalBasis" ? (
-                                <div>
+                                <div className="w-100">
                                     {LEGAL_BASIS_OPTIONS.map((basis, index) => {
                                         const selected = active.content.split("\n").includes(basis);
                                         return (
@@ -1757,7 +1746,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                     })}
                                 </div>
                             ) : active.key === "dataSubjectRights" ? (
-                                <div>
+                                <div className="w-100">
                                     {DATA_SUBJECT_RIGHTS_OPTIONS.map((right, index) => {
                                         const selected = active.content.split("\n").includes(right);
                                         return (
@@ -1774,25 +1763,25 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                     })}
                                 </div>
                             ) : active.key === "contactDPO" || active.key === "grievanceOfficer" ? (
-                                <div className="row g-3">
-                                    <div className="col-md-6">
+                                <div className="row g-3 w-100 m-0">
+                                    <div className="col-md-6 ps-0">
                                         <label className="form-label small fw-semibold">Name</label>
-                                        <input type="text" className="form-control" placeholder="Enter name" value={active.content?.split("|")[0] || ""} onChange={(e) => {
+                                        <input type="text" className="form-control w-100" placeholder="Enter name" value={active.content?.split("|")[0] || ""} onChange={(e) => {
                                             const email = active.content?.split("|")[1] || "";
                                             updateSection(active.key, { content: `${e.target.value}|${email}` });
                                         }} />
                                     </div>
-                                    <div className="col-md-6">
+                                    <div className="col-md-6 pe-0">
                                         <label className="form-label small fw-semibold">Email</label>
-                                        <input type="email" className="form-control" placeholder="Enter email address" value={active.content?.split("|")[1] || ""} onChange={(e) => {
+                                        <input type="email" className="form-control w-100" placeholder="Enter email address" value={active.content?.split("|")[1] || ""} onChange={(e) => {
                                             const name = active.content?.split("|")[0] || "";
                                             updateSection(active.key, { content: `${name}|${e.target.value}` });
                                         }} />
                                     </div>
                                 </div>
                             ) : active.key === "retentionPeriod" ? (
-                                <div className="row g-3">
-                                    <div className="col-md-6">
+                                <div className="row g-3 w-100 m-0">
+                                    <div className="col-md-6 ps-0">
                                         <label className="form-label small fw-semibold">From Date</label>
                                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                                             <DatePicker value={active.content?.split("|")[0] ? dayjs(active.content.split("|")[0]) : null} onChange={(newValue) => {
@@ -1800,10 +1789,10 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                                 const fromDate = newValue ? newValue.format("YYYY-MM-DD") : "";
                                                 const duration = calculateMonths(fromDate, toDate);
                                                 updateSection(active.key, { content: `${fromDate}|${toDate}|${duration}` });
-                                            }} />
+                                            }} slotProps={{ textField: { className: "form-control w-100", size: "small" } }} />
                                         </LocalizationProvider>
                                     </div>
-                                    <div className="col-md-6">
+                                    <div className="col-md-6 pe-0">
                                         <label className="form-label small fw-semibold">To Date</label>
                                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                                             <DatePicker value={active.content?.split("|")[1] ? dayjs(active.content.split("|")[1]) : null} onChange={(newValue) => {
@@ -1811,19 +1800,20 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                                                 const toDate = newValue ? newValue.format("YYYY-MM-DD") : "";
                                                 const duration = calculateMonths(fromDate, toDate);
                                                 updateSection(active.key, { content: `${fromDate}|${toDate}|${duration}` });
-                                            }} />
+                                            }} slotProps={{ textField: { className: "form-control w-100", size: "small" } }} />
                                         </LocalizationProvider>
                                     </div>
-                                    <div className="col-12">
-                                        <div className="p-2" style={{ background: "rgba(79,110,247,0.08)", borderRadius: 8 }}>
+                                    <div className="col-12 ps-0 pe-0">
+                                        <div className="p-2 w-100" style={{ background: "rgba(79,110,247,0.08)", borderRadius: 8 }}>
                                             <strong>Retention Duration:</strong> {active.content?.split("|")[2] || "—"}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <textarea className="form-control" rows={10} value={active.content} onChange={(e) => updateSection(active.key, { content: e.target.value })} />
+                                // 🔥 FIX: Set minHeight to 350px so it stretches tall, and w-100 so it stretches wide
+                                <textarea className="form-control w-100" style={{ minHeight: "350px", resize: "vertical" }} value={active.content} onChange={(e) => updateSection(active.key, { content: e.target.value })} />
                             )}
-                            <div className="d-flex justify-content-between align-items-center mt-2">
+                            <div className="d-flex justify-content-between align-items-center mt-2 w-100">
                                 <span style={{ fontSize: 12, color: "var(--bs-secondary-color)" }}>{active.content.length} characters</span>
                                 {active.content.trim().length > 0 && <span style={{ fontSize: 12, color: "#198754" }}><i className="bi bi-check-circle me-1" /> Section complete</span>}
                             </div>
@@ -1941,7 +1931,7 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                 </div>
 
                 <div className="panel">
-                    <div className="p-4">
+                    <div className={step === 2 ? "" : "p-4"}>
                         {step === 1 && renderStep1()}
                         {step === 2 && renderStep2()}
                         {step === 3 && renderStep3()}
@@ -1961,21 +1951,18 @@ const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; o
                             {step < 3 ? (
                                 <button className="btn btn-sm btn-primary" disabled={step === 1 && (!step1Valid && !draftValid)} onClick={() => {
                                     setStep((s) => (s + 1) as 1 | 2 | 3);
-                                    if (step === 1 && form.sections[0]) {
-                                        setActiveSection(form.sections[0].key);
-                                    }
+                                    if (step === 1 && form.sections[0]) setActiveSection(form.sections[0].key);
                                 }}>
                                     Next <i className="bi bi-arrow-right ms-1" />
                                 </button>
                             ) : (
                                 <div className="d-flex gap-2">
-                                    {/* <button className="btn btn-sm btn-outline-warning" onClick={() => handleSave(true)} disabled={!draftValid}>
+                                    <button className="btn btn-sm btn-outline-warning" onClick={() => handleSave(true)} disabled={!draftValid}>
                                         <i className="bi bi-save me-1" /> Save as Draft
                                     </button>
-
                                     <button className="btn btn-sm" style={{ background: requiredFilled && step1Valid ? "linear-gradient(135deg, #198754, #28a745)" : "rgba(255,255,255,0.05)", border: "none", color: "#fff" }} disabled={!requiredFilled || !step1Valid} onClick={() => handleSave(false)}>
                                         <i className="bi bi-send me-1" /> Publish Notice
-                                    </button> */}
+                                    </button>
                                 </div>
                             )}
                         </div>
