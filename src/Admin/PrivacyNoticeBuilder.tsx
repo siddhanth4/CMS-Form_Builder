@@ -1381,8 +1381,7 @@
 // };
 
 // export default PrivacyNoticeBuilder;
-
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -1397,127 +1396,44 @@ const calculateMonths = (from: string, to: string) => {
     return months >= 0 ? `${months} month(s)` : "";
 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type SectionKey =
-    | "dataController"
-    | "purposeOfProcessing"
-    | "dataCategories"
-    | "legalBasis"
-    | "retentionPeriod"
-    | "dataSharing"
-    | "dataSubjectRights"
-    | "contactDPO"
-    | "grievanceOfficer"
-    | "policyUpdates";
+type SectionKey = "dataController" | "purposeOfProcessing" | "dataCategories" | "legalBasis" | "retentionPeriod" | "dataSharing" | "dataSubjectRights" | "contactDPO" | "grievanceOfficer" | "policyUpdates";
 
 interface NoticeSection {
-    key: SectionKey;
-    title: string;
-    icon: string;
-    placeholder: string;
-    required: boolean;
-    content: string;
-    enabled: boolean;
+    key: SectionKey; title: string; icon: string; placeholder: string; required: boolean; content: string; enabled: boolean;
 }
 
 interface PrivacyNoticeForm {
-    noticeName: string;
-    organizationName: string;
-    effectiveDate: string;
-    version: string;
-    language: string;
-    sections: NoticeSection[];
+    noticeName: string; organizationName: string; effectiveDate: string; version: string; language: string; sections: NoticeSection[];
 }
 
-const PURPOSE_OPTIONS = [
-    "Service Provision & Account Management (Provide services, create/manage accounts, process requests)",
-    "Communication & Customer Support (Send updates, notifications, and handle user queries)",
-    "Analytics & Service Improvement (Analyze usage, improve features, optimize performance)",
-    "Personalization (Customize content, recommendations, and user experience)",
-    "AI/ML Training & Research (Train models, develop new features, innovation)",
-    "Marketing & Promotional Activities (Send offers, advertisements, product updates)",
-    "Security, Fraud Prevention & Legal Compliance (Protect platform, detect fraud, comply with laws, enforce policies)",
-];
-
-const DATA_CATEGORIES_OPTIONS = [
-    "Identity Information (Name, username, gender, date of birth)",
-    "Contact Information (Email, mobile number, address)",
-    "Government Identification Details (Aadhaar, PAN, passport, driving license)",
-    "Financial & Payment Information (Bank details, UPI ID, transactions, billing info)",
-    "Technical & Device Information (IP address, device type, browser, system logs)",
-    "Usage & Behavioral Data (Activity, preferences, interaction patterns)",
-    "User-Provided Content & Documents (Form inputs, uploaded files, feedback, messages)",
-    "Professional / Educational Information (Job details, company, education, resume)",
-    "Communication Data (Emails, chats, support tickets, call records)",
-    "Third-Party / Integrated Data (Social media data, partner-provided data)",
-    "Sensitive Personal Data (Biometric, health, financial credentials, other sensitive info)",
-];
-
-const LEGAL_BASIS_OPTIONS = [
-    "Consent of the Data Principal",
-    "Compliance with legal obligations",
-    "Performance of a contract",
-    "Legitimate uses (as per DPDP Act)",
-    "Prevention of fraud / security purposes",
-];
-
-const DATA_SUBJECT_RIGHTS_OPTIONS = [
-    "Right to Access Information",
-    "Right to Correction & Update",
-    "Right to Erasure (Deletion)",
-    "Right to Withdraw Consent",
-    "Right to Grievance Redressal",
-    "Right to Nominate",
-];
+const PURPOSE_OPTIONS = ["Service Provision & Account Management", "Communication & Customer Support", "Analytics & Service Improvement", "Personalization", "AI/ML Training & Research", "Marketing & Promotional Activities", "Security, Fraud Prevention & Legal Compliance"];
+const DATA_CATEGORIES_OPTIONS = ["Identity Information", "Contact Information", "Government Identification Details", "Financial & Payment Information", "Technical & Device Information", "Usage & Behavioral Data", "User-Provided Content & Documents", "Professional / Educational Information", "Communication Data", "Third-Party / Integrated Data", "Sensitive Personal Data"];
+const LEGAL_BASIS_OPTIONS = ["Consent of the Data Principal", "Compliance with legal obligations", "Performance of a contract", "Legitimate uses (as per DPDP Act)", "Prevention of fraud / security purposes"];
+const DATA_SUBJECT_RIGHTS_OPTIONS = ["Right to Access Information", "Right to Correction & Update", "Right to Erasure (Deletion)", "Right to Withdraw Consent", "Right to Grievance Redressal", "Right to Nominate"];
 
 const DEFAULT_SECTIONS: NoticeSection[] = [
-    { key: "dataController", title: "Data Controller / Fiduciary Information", icon: "bi-building", placeholder: "Enter details about the organization acting as Data Fiduciary under the DPDP Act, 2023. Include registered name, address, and contact information.", required: true, content: "", enabled: true },
-    { key: "purposeOfProcessing", title: "Purpose of Processing Personal Data", icon: "bi-bullseye", placeholder: "Clearly describe the specific, explicit, and legitimate purposes for which personal data is collected and processed. Each purpose must be lawful under the DPDP Act.", required: true, content: "", enabled: true },
-    { key: "dataCategories", title: "Categories of Personal Data Collected", icon: "bi-collection", placeholder: "List the types of personal data that will be collected (e.g., name, email, Aadhaar number, health data, financial data). Indicate if any sensitive personal data is included.", required: true, content: "", enabled: true },
-    { key: "legalBasis", title: "Legal Basis for Processing", icon: "bi-shield-check", placeholder: "Specify the legal basis under Section 4 of the DPDP Act, 2023. E.g., Consent of the Data Principal, performance of a contract, compliance with legal obligation, etc.", required: true, content: "", enabled: true },
-    { key: "retentionPeriod", title: "Data Retention Period", icon: "bi-clock-history", placeholder: "Specify how long personal data will be retained and the criteria used to determine retention periods. Include data erasure obligations under Section 8(7) of the DPDP Act.", required: true, content: "", enabled: true },
-    { key: "dataSharing", title: "Data Sharing & Third-Party Transfers", icon: "bi-share", placeholder: "Disclose if personal data is shared with Data Processors or third parties. Mention cross-border transfers if applicable and safeguards in place.", required: false, content: "", enabled: true },
-    { key: "dataSubjectRights", title: "Rights of the Data Principal", icon: "bi-person-check", placeholder: "Describe the rights available under Chapter III of the DPDP Act: Right to Access, Right to Correction, Right to Erasure, Right to Grievance Redressal, Right to Nominate, and Right to Withdraw Consent.", required: true, content: "", enabled: true },
-    { key: "contactDPO", title: "Contact – Data Protection Officer", icon: "bi-person-badge", placeholder: "Provide name, email, and contact details of the Data Protection Officer (if appointed) or the designated contact person for data protection queries.", required: false, content: "", enabled: false },
-    { key: "grievanceOfficer", title: "Grievance Redressal Officer", icon: "bi-headset", placeholder: "Provide contact details of the Grievance Officer and the process to raise a complaint. Include escalation to the Data Protection Board of India if unresolved.", required: true, content: "", enabled: true },
-    { key: "policyUpdates", title: "Changes to This Privacy Notice", icon: "bi-arrow-repeat", placeholder: "Explain how and when Data Principals will be notified of material changes to this privacy notice. Include the effective date mechanism.", required: false, content: "", enabled: true },
+    { key: "dataController", title: "Data Controller / Fiduciary Information", icon: "bi-building", placeholder: "Enter details about the organization acting as Data Fiduciary...", required: true, content: "", enabled: true },
+    { key: "purposeOfProcessing", title: "Purpose of Processing Personal Data", icon: "bi-bullseye", placeholder: "Clearly describe the specific, explicit, and legitimate purposes...", required: true, content: "", enabled: true },
+    { key: "dataCategories", title: "Categories of Personal Data Collected", icon: "bi-collection", placeholder: "List the types of personal data that will be collected...", required: true, content: "", enabled: true },
+    { key: "legalBasis", title: "Legal Basis for Processing", icon: "bi-shield-check", placeholder: "Specify the legal basis under Section 4 of the DPDP Act...", required: true, content: "", enabled: true },
+    { key: "retentionPeriod", title: "Data Retention Period", icon: "bi-clock-history", placeholder: "Specify how long personal data will be retained...", required: true, content: "", enabled: true },
+    { key: "dataSharing", title: "Data Sharing & Third-Party Transfers", icon: "bi-share", placeholder: "Disclose if personal data is shared with Data Processors...", required: false, content: "", enabled: true },
+    { key: "dataSubjectRights", title: "Rights of the Data Principal", icon: "bi-person-check", placeholder: "Describe the rights available under Chapter III of the DPDP Act...", required: true, content: "", enabled: true },
+    { key: "contactDPO", title: "Contact – Data Protection Officer", icon: "bi-person-badge", placeholder: "Provide contact details of the Data Protection Officer...", required: false, content: "", enabled: false },
+    { key: "grievanceOfficer", title: "Grievance Redressal Officer", icon: "bi-headset", placeholder: "Provide contact details of the Grievance Officer...", required: true, content: "", enabled: true },
+    { key: "policyUpdates", title: "Changes to This Privacy Notice", icon: "bi-arrow-repeat", placeholder: "Explain how and when Data Principals will be notified...", required: false, content: "", enabled: true },
 ];
 
-const LANGUAGE_OPTIONS = [
-    { value: "en", label: "English" },
-    { value: "hi", label: "Hindi (हिन्दी)" },
-    { value: "mr", label: "Marathi (मराठी)" },
-    { value: "ta", label: "Tamil (தமிழ்)" },
-    { value: "te", label: "Telugu (తెలుగు)" },
-    { value: "bn", label: "Bengali (বাংলা)" },
-    { value: "gu", label: "Gujarati (ગુજરાતી)" },
-    { value: "kn", label: "Kannada (ಕನ್ನಡ)" },
-];
-
-// ─── Subcomponents ────────────────────────────────────────────────────────────
+const LANGUAGE_OPTIONS = [{ value: "en", label: "English" }, { value: "hi", label: "Hindi (हिन्दी)" }, { value: "mr", label: "Marathi (मराठी)" }, { value: "ta", label: "Tamil (தமிழ்)" }, { value: "te", label: "Telugu (తెలుగు)" }, { value: "bn", label: "Bengali (বাংলা)" }, { value: "gu", label: "Gujarati (ગુજરાતી)" }, { value: "kn", label: "Kannada (ಕನ್ನಡ)" }];
 
 const StepIndicator: React.FC<{ step: number; current: number; label: string }> = ({ step, current, label }) => {
-    const done = current > step;
-    const active = current === step;
+    const done = current > step; const active = current === step;
     return (
         <div className="d-flex align-items-center gap-2">
-            <div style={{
-                width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 700,
-                background: done ? "var(--bs-success, #198754)" : active ? "var(--accent, #4f6ef7)" : "rgba(255,255,255,0.07)",
-                color: done || active ? "#fff" : "var(--bs-secondary-color, #adb5bd)",
-                border: active ? "2px solid var(--accent, #4f6ef7)" : "2px solid transparent",
-                transition: "all 0.2s", flexShrink: 0,
-            }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, background: done ? "var(--bs-success, #198754)" : active ? "var(--accent, #4f6ef7)" : "rgba(255,255,255,0.07)", color: done || active ? "#fff" : "var(--bs-secondary-color, #adb5bd)", border: active ? "2px solid var(--accent, #4f6ef7)" : "2px solid transparent", transition: "all 0.2s", flexShrink: 0 }}>
                 {done ? <i className="bi bi-check" /> : step}
             </div>
-            <span style={{
-                fontSize: 13, fontWeight: active ? 600 : 400,
-                color: active ? "var(--bs-body-color, #dee2e6)" : done ? "var(--bs-success, #198754)" : "var(--bs-secondary-color, #adb5bd)",
-            }}>
-                {label}
-            </span>
+            <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "var(--bs-body-color, #dee2e6)" : done ? "var(--bs-success, #198754)" : "var(--bs-secondary-color, #adb5bd)" }}>{label}</span>
         </div>
     );
 };
@@ -1530,58 +1446,39 @@ const PreviewModal: React.FC<{ form: PrivacyNoticeForm; onClose: () => void }> =
                 <div className="modal-content" style={{ background: "var(--bs-body-bg, #0f1117)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16 }}>
                     <div className="modal-header" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(79,110,247,0.08)", borderRadius: "16px 16px 0 0" }}>
                         <div>
-                            <h5 className="modal-title mb-0 fw-bold">
-                                <i className="bi bi-eye me-2 text-primary" /> Privacy Notice Preview
-                            </h5>
+                            <h5 className="modal-title mb-0 fw-bold"><i className="bi bi-eye me-2 text-primary" /> Privacy Notice Preview</h5>
                             <small className="text-secondary">As it will appear to the Data Principal</small>
                         </div>
                         <button className="btn-close btn-close-white" onClick={onClose} />
                     </div>
-
                     <div className="modal-body p-4">
                         <div className="text-center mb-4 p-4" style={{ background: "linear-gradient(135deg, rgba(79,110,247,0.15), rgba(79,110,247,0.05))", borderRadius: 12, border: "1px solid rgba(79,110,247,0.2)" }}>
                             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(79,110,247,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                                 <i className="bi bi-shield-lock fs-5 text-primary" />
                             </div>
                             <h4 className="fw-bold mb-1">{form.noticeName || "Privacy Notice"}</h4>
-                            <div className="text-secondary small">{form.organizationName} · Version {form.version} · Effective {form.effectiveDate || "—"}</div>
-                            <div className="mt-2">
-                                <span className="badge" style={{ background: "rgba(79,110,247,0.2)", color: "#7c9ff7", fontSize: 11 }}>DPDP Act, 2023 Compliant</span>
-                            </div>
+                            <div className="text-secondary small">{form.organizationName || "—"} · Version {form.version} · Effective {form.effectiveDate || "—"}</div>
+                            <div className="mt-2"><span className="badge" style={{ background: "rgba(79,110,247,0.2)", color: "#7c9ff7", fontSize: 11 }}>DPDP Act, 2023 Compliant</span></div>
                         </div>
 
                         {enabledSections.map((sec, idx) => (
                             <div key={sec.key} className="mb-3">
                                 <div className="d-flex align-items-center gap-2 mb-2">
-                                    <span style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(79,110,247,0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#7c9ff7", fontWeight: 700, flexShrink: 0 }}>
-                                        {idx + 1}
-                                    </span>
+                                    <span style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(79,110,247,0.15)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#7c9ff7", fontWeight: 700, flexShrink: 0 }}>{idx + 1}</span>
                                     <h6 className="mb-0 fw-semibold">{sec.title}</h6>
                                     {sec.required && <span className="badge" style={{ background: "rgba(220,53,69,0.15)", color: "#f86e7a", fontSize: 10 }}>Required</span>}
                                 </div>
                                 <div className="p-3" style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", fontSize: 14, color: sec.content ? "var(--bs-body-color)" : "var(--bs-secondary-color)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                                     {sec.content ? (
                                         sec.key === "retentionPeriod" ? (
-                                            <>
-                                                <div><strong>From:</strong> {sec.content.split("|")[0]}</div>
-                                                <div><strong>To:</strong> {sec.content.split("|")[1]}</div>
-                                                <div><strong>Duration:</strong> {sec.content.split("|")[2]}</div>
-                                            </>
+                                            <><div><strong>From:</strong> {sec.content.split("|")[0]}</div><div><strong>To:</strong> {sec.content.split("|")[1]}</div><div><strong>Duration:</strong> {sec.content.split("|")[2]}</div></>
                                         ) : sec.key === "contactDPO" || sec.key === "grievanceOfficer" ? (
-                                            <>
-                                                <div><strong>Name:</strong> {sec.content.split("|")[0] || "—"}</div>
-                                                <div><strong>Email:</strong> {sec.content.split("|")[1] || "—"}</div>
-                                            </>
-                                        ) : (
-                                            sec.content
-                                        )
-                                    ) : (
-                                        <span className="fst-italic">[No content entered for this section]</span>
-                                    )}
+                                            <><div><strong>Name:</strong> {sec.content.split("|")[0] || "—"}</div><div><strong>Email:</strong> {sec.content.split("|")[1] || "—"}</div></>
+                                        ) : ( sec.content )
+                                    ) : ( <span className="fst-italic">[No content entered for this section]</span> )}
                                 </div>
                             </div>
                         ))}
-
                         <div className="mt-4 p-3 text-center" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "var(--bs-secondary-color)" }}>
                             <i className="bi bi-shield-check me-1 text-success" /> This notice is prepared in compliance with the Digital Personal Data Protection Act, 2023 (India)
                         </div>
@@ -1594,52 +1491,57 @@ const PreviewModal: React.FC<{ form: PrivacyNoticeForm; onClose: () => void }> =
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const PrivacyNoticeBuilder: React.FC = () => {
+const PrivacyNoticeBuilder: React.FC<{ editId?: string | null; editData?: any; onClose?: () => void }> = ({ editId, editData, onClose }) => {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [showPreview, setShowPreview] = useState(false);
     const [saved, setSaved] = useState(false);
     const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
 
     const [form, setForm] = useState<PrivacyNoticeForm>({
-        noticeName: "",
-        organizationName: "",
-        effectiveDate: "",
-        version: "1.0",
-        language: "en",
-        sections: DEFAULT_SECTIONS,
+        noticeName: "", organizationName: "", effectiveDate: "", version: "1.0", language: "en", sections: DEFAULT_SECTIONS,
     });
 
-    const updateMeta = (field: keyof Omit<PrivacyNoticeForm, "sections">, value: string) => {
-        setForm((f) => ({ ...f, [field]: value }));
-    };
+    // 🔥 FIX: Scans the invisible string tag to resurrect the Draft properly
+    useEffect(() => {
+        if (editData) {
+            const html = editData.notice || editData.Notice || "";
+            const matchState = html.match(/\[META_v1_([A-Za-z]+)_(\d+)_(\d+)_([^\]]+)\]/);
+            if (matchState && matchState[4]) {
+                try {
+                    const parsedState = JSON.parse(decodeURIComponent(escape(atob(matchState[4]))));
+                    setForm(parsedState);
+                    if (parsedState.sections && parsedState.sections.length > 0) {
+                        setActiveSection(parsedState.sections[0].key);
+                    }
+                } catch(e) { console.error("Could not parse draft state", e) }
+            } else {
+                setForm(f => ({ ...f, noticeName: editData.noticeName || editData.NoticeName || "Edited Notice" }));
+            }
+        }
+    }, [editData]);
 
-    const updateSection = (key: SectionKey, patch: Partial<NoticeSection>) => {
-        setForm((f) => ({
-            ...f,
-            sections: f.sections.map((s) => (s.key === key ? { ...s, ...patch } : s)),
-        }));
-    };
-
-    const toggleSection = (key: SectionKey) => {
-        setForm((f) => ({
-            ...f,
-            sections: f.sections.map((s) => s.key === key && !s.required ? { ...s, enabled: !s.enabled } : s),
-        }));
-    };
+    const updateMeta = (field: keyof Omit<PrivacyNoticeForm, "sections">, value: string) => { setForm((f) => ({ ...f, [field]: value })); };
+    const updateSection = (key: SectionKey, patch: Partial<NoticeSection>) => { setForm((f) => ({ ...f, sections: f.sections.map((s) => (s.key === key ? { ...s, ...patch } : s)), })); };
+    const toggleSection = (key: SectionKey) => { setForm((f) => ({ ...f, sections: f.sections.map((s) => s.key === key && !s.required ? { ...s, enabled: !s.enabled } : s), })); };
 
     const completedSections = form.sections.filter((s) => s.enabled && s.content.trim().length > 0).length;
     const enabledSections = form.sections.filter((s) => s.enabled).length;
     const requiredFilled = form.sections.filter((s) => s.required).every((s) => s.content.trim().length > 0);
     const step1Valid = form.noticeName.trim() && form.organizationName.trim() && form.effectiveDate && form.version.trim();
+    const draftValid = form.noticeName.trim().length > 0;
 
-    const generateHTML = () => {
-        let html = `<div style="font-family: Arial, sans-serif; color: #e2e8f0;">`;
+    // 🔥 FIX: Encodes everything inside an INVISIBLE text node instead of an HTML attribute so the backend cannot erase it
+    const generateHTML = (isDraft: boolean) => {
+        const stateBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(form))));
+        const statusVal = isDraft ? "Draft" : "Published";
+        
+        let html = `<div style="display:none; visibility:hidden; height:0; width:0; overflow:hidden; opacity:0;">[META_v1_${statusVal}_${completedSections}_${enabledSections}_${stateBase64}]</div>`;
+        html += `<div style="font-family: Arial, sans-serif; color: #e2e8f0;">`;
         html += `<h2 style="color: #7c9ff7; border-bottom: 1px solid #333; padding-bottom: 10px;">${form.noticeName}</h2>`;
         html += `<p><strong style="color:#fff;">Organization:</strong> ${form.organizationName} | <strong style="color:#fff;">Version:</strong> ${form.version} | <strong style="color:#fff;">Effective Date:</strong> ${form.effectiveDate}</p>`;
 
         form.sections.filter(s => s.enabled && s.content).forEach((sec, i) => {
             html += `<h4 style="color: #4f6ef7; margin-top: 24px;">${i + 1}. ${sec.title}</h4>`;
-
             if (sec.key === 'retentionPeriod' || sec.key === 'contactDPO' || sec.key === 'grievanceOfficer') {
                 const parts = sec.content.split('|');
                 if (sec.key === 'retentionPeriod') {
@@ -1655,23 +1557,45 @@ const PrivacyNoticeBuilder: React.FC = () => {
         return html;
     };
 
-    const handleSave = async () => {
+    const handleSave = async (isDraft: boolean = false) => {
         try {
-            const htmlFormat = generateHTML();
-            const res = await addNotice({
-                FormID: "0",
-                Notice: htmlFormat
-            });
-            
-            console.log("Backend Save Response:", res);
+            const htmlFormat = generateHTML(isDraft);
+            const statusStr = isDraft ? "Draft" : "Published";
 
+            // Grab the target ID safely as an Integer
+            const targetId = editId && !isNaN(Number(editId)) ? Number(editId) : 0;
+
+            // 🔥 FIX: Provides the Id to the backend in EVERY possible property so it strictly Updates rather than duplicated
+            const payload: any = {
+                FormID: "0",
+                Notice: htmlFormat,
+                Status: statusStr,
+                status: statusStr, 
+                NoticeName: form.noticeName,
+                noticeName: form.noticeName
+            };
+
+            if (targetId > 0) {
+                payload.Id = targetId;
+                payload.id = targetId;
+                payload.NoticeId = targetId;
+                payload.noticeId = targetId;
+            }
+
+            console.log("Sending payload to backend to ensure UPDATE:", payload);
+
+            const res = await addNotice(payload);
+            
             if (res && res.responseCode && res.responseCode !== 101) {
                 alert(`Backend rejected the save: ${res.responseMessage}`);
                 return;
             }
 
             setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
+            setTimeout(() => {
+                setSaved(false);
+                if (onClose) onClose(); 
+            }, 1000);
         } catch (error) {
             console.error("Failed to save notice", error);
             alert("Failed to save Notice to Backend. Check browser console.");
@@ -1914,7 +1838,6 @@ const PrivacyNoticeBuilder: React.FC = () => {
         const missing = form.sections.filter((s) => s.required && s.enabled && s.content.trim().length === 0);
         return (
             <div>
-                {/* Summary Card */}
                 <div className="p-4 mb-4" style={{ background: "linear-gradient(135deg, rgba(79,110,247,0.1), rgba(79,110,247,0.04))", borderRadius: 12, border: "1px solid rgba(79,110,247,0.2)" }}>
                     <div className="row g-3">
                         <div className="col-md-6">
@@ -1940,7 +1863,6 @@ const PrivacyNoticeBuilder: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Sections Status */}
                 <div className="mb-4">
                     <div className="fw-semibold mb-3">Section Completion Status</div>
                     <div className="row g-2">
@@ -1958,7 +1880,6 @@ const PrivacyNoticeBuilder: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Warnings */}
                 {missing.length > 0 && (
                     <div className="p-3 mb-4" style={{ background: "rgba(220,53,69,0.08)", borderRadius: 10, border: "1px solid rgba(220,53,69,0.25)" }}>
                         <div className="fw-semibold text-danger mb-2">
@@ -1975,9 +1896,7 @@ const PrivacyNoticeBuilder: React.FC = () => {
 
     return (
         <>
-            {showPreview && (
-                <PreviewModal form={form} onClose={() => setShowPreview(false)} />
-            )}
+            {showPreview && <PreviewModal form={form} onClose={() => setShowPreview(false)} />}
 
             <div className="container-fluid">
                 <div className="panel mb-3">
@@ -1987,7 +1906,7 @@ const PrivacyNoticeBuilder: React.FC = () => {
                                 <i className="bi bi-file-earmark-lock2 text-primary" /> Privacy Notice Builder
                             </div>
                             <div className="text-secondary small">
-                                Create DPDP Act, 2023 compliant privacy notices
+                                {editId ? `Editing Draft Notice #${editId}` : "Create DPDP Act, 2023 compliant privacy notices"}
                             </div>
                         </div>
                         <div className="d-flex gap-2">
@@ -1995,13 +1914,17 @@ const PrivacyNoticeBuilder: React.FC = () => {
                                 <i className="bi bi-eye me-1" /> Preview
                             </button>
                             {saved ? (
-                                <button className="btn btn-sm btn-success" disabled>
-                                    <i className="bi bi-check-circle me-1" /> Saved!
-                                </button>
+                                <button className="btn btn-sm btn-success" disabled><i className="bi bi-check-circle me-1" /> Saved!</button>
                             ) : (
-                                <button className="btn btn-sm btn-primary" onClick={handleSave} disabled={!requiredFilled || !step1Valid}>
-                                    <i className="bi bi-floppy me-1" /> Save Notice
-                                </button>
+                                <>
+                                    <button className="btn btn-sm btn-outline-warning" onClick={() => handleSave(true)} disabled={!draftValid}>
+                                        <i className="bi bi-save me-1" /> Save Draft
+                                    </button>
+
+                                    <button className="btn btn-sm btn-primary" onClick={() => handleSave(false)} disabled={!requiredFilled || !step1Valid}>
+                                        <i className="bi bi-send me-1" /> Publish
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
@@ -2036,7 +1959,7 @@ const PrivacyNoticeBuilder: React.FC = () => {
                                 </span>
                             )}
                             {step < 3 ? (
-                                <button className="btn btn-sm btn-primary" disabled={step === 1 && !step1Valid} onClick={() => {
+                                <button className="btn btn-sm btn-primary" disabled={step === 1 && (!step1Valid && !draftValid)} onClick={() => {
                                     setStep((s) => (s + 1) as 1 | 2 | 3);
                                     if (step === 1 && form.sections[0]) {
                                         setActiveSection(form.sections[0].key);
@@ -2045,9 +1968,15 @@ const PrivacyNoticeBuilder: React.FC = () => {
                                     Next <i className="bi bi-arrow-right ms-1" />
                                 </button>
                             ) : (
-                                <button className="btn btn-sm" style={{ background: requiredFilled && step1Valid ? "linear-gradient(135deg, #198754, #28a745)" : "rgba(255,255,255,0.05)", border: "none", color: "#fff" }} disabled={!requiredFilled || !step1Valid} onClick={handleSave}>
-                                    <i className="bi bi-send me-1" /> Publish Notice
-                                </button>
+                                <div className="d-flex gap-2">
+                                    {/* <button className="btn btn-sm btn-outline-warning" onClick={() => handleSave(true)} disabled={!draftValid}>
+                                        <i className="bi bi-save me-1" /> Save as Draft
+                                    </button>
+
+                                    <button className="btn btn-sm" style={{ background: requiredFilled && step1Valid ? "linear-gradient(135deg, #198754, #28a745)" : "rgba(255,255,255,0.05)", border: "none", color: "#fff" }} disabled={!requiredFilled || !step1Valid} onClick={() => handleSave(false)}>
+                                        <i className="bi bi-send me-1" /> Publish Notice
+                                    </button> */}
+                                </div>
                             )}
                         </div>
                     </div>

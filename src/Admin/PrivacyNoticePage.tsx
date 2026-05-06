@@ -69,20 +69,24 @@ type View = "list" | "builder";
 const PrivacyNoticePage: React.FC = () => {
     const [view, setView] = useState<View>("list");
     const [editId, setEditId] = useState<string | null>(null);
+    const [editData, setEditData] = useState<any>(null);
 
     const handleCreateNew = () => {
         setEditId(null);
+        setEditData(null);
         setView("builder");
     };
 
-    const handleEdit = (id: string) => {
+    // 🔥 FIX: Properly passes the ID and Notice Data down to the Builder
+    const handleEdit = (id: string, noticeData: any) => {
         setEditId(id);
+        setEditData(noticeData);
         setView("builder");
-        // TODO: pass id to builder if doing active edits later
     };
 
     const handleBackToList = () => {
         setEditId(null);
+        setEditData(null);
         setView("list");
     };
 
@@ -92,28 +96,20 @@ const PrivacyNoticePage: React.FC = () => {
                 <div className="mb-3">
                     <button
                         className="btn btn-sm d-flex align-items-center gap-2"
-                        style={{
-                            background: "rgba(255,255,255,0.05)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            color: "var(--bs-secondary-color)",
-                        }}
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--bs-secondary-color)" }}
                         onClick={handleBackToList}
                     >
-                        <i className="bi bi-arrow-left" />
-                        Back to Notices
+                        <i className="bi bi-arrow-left" /> Back to Notices
                     </button>
                 </div>
             )}
 
             {view === "list" && (
-                <PrivacyNoticeList
-                    onCreateNew={handleCreateNew}
-                    onEdit={handleEdit}
-                />
+                <PrivacyNoticeList onCreateNew={handleCreateNew} onEdit={handleEdit} />
             )}
 
             {view === "builder" && (
-                <PrivacyNoticeBuilder />
+                <PrivacyNoticeBuilder editId={editId} editData={editData} onClose={handleBackToList} />
             )}
         </div>
     );

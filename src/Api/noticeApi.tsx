@@ -49,3 +49,12 @@ export const getNoticeById = async (noticeId: string) => {
     if (!response.ok) throw new Error("Failed to fetch Notice Details");
     return response.json(); 
 };
+
+export const deleteNotice = async (noticeId: string | number) => {
+    const response = await fetch(`${baseUrl}/api/Notice/deleteNotice?id=${noticeId}`, {
+        method: "POST", // Change to "DELETE" if your backend requires the DELETE method
+        headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error("Failed to delete Notice");
+    return response.json();
+};

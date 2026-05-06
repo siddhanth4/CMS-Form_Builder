@@ -1751,6 +1751,29 @@ const getFieldDescription = (f: BuilderField) => {
     return "";
 };
 
+/* 🔥 NEW HELPERS: To extract Title from backend HTML strings */
+const extractTitleFromContent = (content: string) => {
+    if (!content || typeof content !== "string") return null;
+    const titleMatch = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
+    if (titleMatch && titleMatch[1]) {
+        return titleMatch[1].replace(/<[^>]*>/g, "").trim();
+    }
+    const firstParagraph = content.match(/<p[^>]*>(.*?)<\/p>/i);
+    if (firstParagraph && firstParagraph[1]) {
+        const text = firstParagraph[1].replace(/<[^>]*>/g, "").trim();
+        if (text.length < 100 && !text.includes(".")) return text;
+    }
+    return null;
+};
+
+const getPrivacyNoticeName = (notice: any, id: string) => {
+    return (
+        notice.noticeName || notice.NoticeName || notice.name || notice.Name || notice.title || notice.Title || notice.privacyNoticeName || notice.PrivacyNoticeName ||
+        (notice.notice || notice.Notice ? extractTitleFromContent(notice.notice || notice.Notice) : null) ||
+        `Privacy Notice #${id}`
+    );
+};
+
 /* ===================== COMPONENT ===================== */
 const FormBuilder: React.FC = () => {
     const { publicIP, refreshForms } = useProject();
@@ -1787,7 +1810,6 @@ const FormBuilder: React.FC = () => {
     }, []);
 
     const [previewOpen, setPreviewOpen] = useState(false);
-    // 👉 NEW: State to track if the Admin has clicked "I Agree" in the preview modal
     const [previewNoticeAgreed, setPreviewNoticeAgreed] = useState(false); 
 
     const FORM_KEY = "FORM_BUILDER_SCHEMA_V1";
@@ -1956,7 +1978,6 @@ const FormBuilder: React.FC = () => {
         }
     }, [selected?.id, selected?.label]);
 
-    // 👉 Get the linked notice HTML safely from the already loaded noticeList
     const linkedNotice = noticeList.find(n => String(n.id || n.Id || n.NoticeId || n.noticeId) === String(meta.noticeId));
     const linkedNoticeHtml = linkedNotice?.Notice || linkedNotice?.notice || linkedNotice?.noticeContent || "<p>Notice Content Unavailable</p>";
 
@@ -1970,7 +1991,6 @@ const FormBuilder: React.FC = () => {
                             <div className="text-secondary small">Draft • Last saved 2 mins ago</div>
                         </div>
                         <div className="d-flex gap-2 align-items-center">
-                            {/* 👉 Updated Preview Button to reset agreed state */}
                             <button className="btn btn-outline-secondary btn-sm" type="button" onClick={() => { setPreviewOpen(true); setPreviewNoticeAgreed(false); }}>Preview</button>
                             <button className="btn btn-primary btn-sm" style={{ background: "var(--brand)", borderColor: "var(--brand)" }} onClick={onClickPublish} disabled={publishLoading}>{publishLoading ? "Publishing..." : "Publish"}</button>
                         </div>
@@ -2063,10 +2083,11 @@ const FormBuilder: React.FC = () => {
                                     </label>
                                     <select className="form-select" style={{ borderColor: "rgba(79,110,247,0.4)" }} value={meta.noticeId || ""} onChange={(e) => setMeta((p) => ({ ...p, noticeId: e.target.value }))}>
                                         <option value="">-- No Notice Attached --</option>
+                                        {/* 🔥 FIX: Dropdown now uses getPrivacyNoticeName to extract and properly format Notice Name and ID */}
                                         {Array.isArray(noticeList) && noticeList.map((n, idx) => {
-                                            const nId = n.id || n.Id || n.noticeId || n.NoticeId || idx;
-                                            const nName = n.noticeName || n.NoticeName || `Privacy Notice #${nId}`;
-                                            return <option key={nId} value={nId}>{nName}</option>;
+                                            const nId = String(n.id || n.Id || n.noticeId || n.NoticeId || idx);
+                                            const nName = getPrivacyNoticeName(n, nId);
+                                            return <option key={nId} value={nId}>{nName} (ID: {nId})</option>;
                                         })}
                                     </select>
                                     <div className="form-text small mt-1">Users must agree to this notice before viewing the form.</div>

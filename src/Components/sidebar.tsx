@@ -280,7 +280,7 @@ const Sidebar: React.FC<Props> = ({ onClose, onNav }) => {
             </button>
 
             <div className="d-flex align-items-center gap-3 p-2 panel mb-3">
-                <div className="brand-badge">FF</div>
+                <div className="brand-badge">CMS</div>
                 <div>
                     <div className="fw-bold">NJ Softtech</div>
                     <div className="text-secondary small">
