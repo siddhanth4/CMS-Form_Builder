@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useProject } from "../Context/projectContext";
 import { Skeleton } from "../Components/loader";
 import { PopupAlert } from "../Components/alert";
@@ -9,36 +9,14 @@ const TableSkeletonRows: React.FC<{ rows?: number }> = ({ rows = 5 }) => {
         <>
             {Array.from({ length: rows }).map((_, i) => (
                 <tr key={`sk_${i}`}>
-                    <td>
-                        <Skeleton height={16} width="70%" />
-                        <div className="mt-2">
-                            <Skeleton height={12} width="50%" />
-                        </div>
-                    </td>
-
-                    <td>
-                        <Skeleton height={14} width={120} />
-                    </td>
-
-                    <td>
-                        <Skeleton height={14} width={120} />
-                    </td>
-
-                    <td>
-                        <Skeleton height={18} width={90} radius={50} />
-                    </td>
-
-                    <td>
-                        <Skeleton height={18} width={90} radius={50} />
-                    </td>
-
-                    <td>
-                        <Skeleton height={14} width={120} />
-                    </td>
-
-                    <td className="text-end">
-                        <Skeleton height={32} width={100} radius={8} />
-                    </td>
+                    <td style={{ width: 40 }} className="text-center"><Skeleton height={16} width={16} radius={4} /></td>
+                    <td><Skeleton height={16} width="70%" /><div className="mt-2"><Skeleton height={12} width="50%" /></div></td>
+                    <td><Skeleton height={16} width={160} /><div className="mt-2"><Skeleton height={12} width={100} /></div></td>
+                    <td><Skeleton height={14} width={120} /></td>
+                    <td><Skeleton height={14} width={100} /></td>
+                    <td><Skeleton height={18} width={90} radius={50} /></td>
+                    <td><Skeleton height={14} width={120} /></td>
+                    <td className="text-end"><Skeleton height={32} width={100} radius={8} /></td>
                 </tr>
             ))}
         </>
@@ -52,11 +30,7 @@ const formatDate = (iso?: string) => {
     if (!iso) return "-";
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const safeString = (value: unknown) => {
@@ -71,93 +45,79 @@ const badgeClass = (type: "success" | "warning" | "secondary" | "danger") => {
     return "badge text-bg-secondary rounded-pill";
 };
 
-const getConsentBadge = (value?: string) => {
-    return value === "Y"
-        ? { text: "Withdraw Requested", className: badgeClass("warning") }
-        : { text: "No Request", className: badgeClass("secondary") };
-};
-
 const getResolvedBadge = (value?: string) => {
     return value === "Y"
         ? { text: "Resolved", className: badgeClass("success") }
-        : { text: "Pending", className: badgeClass("danger") };
+        : { text: "Pending", className: badgeClass("warning") };
 };
 
 const getUserName = (row: any, id: string) => {
     let potentialName = "";
-    
-    // Try to extract user name from FormResponse object (actual form data submitted by user)
     if (row.FormResponse && typeof row.FormResponse === "object") {
-        // Check if FormResponse has fields array (typical form structure)
         if (row.FormResponse.fields && Array.isArray(row.FormResponse.fields)) {
-            // Look through form fields for name-related fields
             for (const field of row.FormResponse.fields) {
                 if (field && field.value) {
                     const fieldName = (field.name || field.label || field.id || "").toLowerCase();
                     const fieldValue = String(field.value).trim();
-                    
-                    // Check for common name field patterns
                     if (fieldName.includes('name') && fieldValue && fieldValue !== '') {
-                        // Prioritize full name fields
-                        if (fieldName.includes('full') || fieldName === 'name') {
-                            return fieldValue;
-                        }
-                        // Store as potential name if it's a single name field
-                        if (!potentialName) {
-                            potentialName = fieldValue;
-                        }
+                        if (fieldName.includes('full') || fieldName === 'name') return fieldValue;
+                        if (!potentialName) potentialName = fieldValue;
                     }
                 }
             }
-            
-            // Return potential name if found
-            if (potentialName) {
-                return potentialName;
-            }
+            if (potentialName) return potentialName;
         }
-        
-        // Check for direct name properties in FormResponse
-        const formResponseName = row.FormResponse.FullName ||
-                                row.FormResponse.Name ||
-                                row.FormResponse.fullName ||
-                                row.FormResponse.name ||
-                                row.FormResponse.CustomerName ||
-                                row.FormResponse.customerName ||
-                                row.FormResponse.UserName ||
-                                row.FormResponse.userName ||
-                                row.FormResponse.FirstName ||
-                                row.FormResponse.firstName;
-        
+        const formResponseName = row.FormResponse.FullName || row.FormResponse.Name || row.FormResponse.fullName || row.FormResponse.name || row.FormResponse.CustomerName || row.FormResponse.customerName || row.FormResponse.UserName || row.FormResponse.userName || row.FormResponse.FirstName || row.FormResponse.firstName;
         if (formResponseName) return String(formResponseName);
     }
-    
-    // Try direct fields in the row object (fallback)
-    const directName = row.FullName ||
-                       row.Name ||
-                       row.fullName ||
-                       row.name ||
-                       row.CustomerName ||
-                       row.customerName ||
-                       row.UserName ||
-                       row.userName ||
-                       row.FirstName ||
-                       row.firstName;
-    
+    const directName = row.FullName || row.Name || row.fullName || row.name || row.CustomerName || row.customerName || row.UserName || row.userName || row.FirstName || row.firstName;
     if (directName) return String(directName);
-    
-    // Try to combine first and last name if available
     const firstName = row.FirstName || row.firstName || row.FormResponse?.FirstName || row.FormResponse?.firstName;
     const lastName = row.LastName || row.lastName || row.FormResponse?.LastName || row.FormResponse?.lastName;
-    
-    if (firstName && lastName) {
-        return `${String(firstName)} ${String(lastName)}`;
-    }
-    
+    if (firstName && lastName) return `${String(firstName)} ${String(lastName)}`;
     if (firstName) return String(firstName);
     if (lastName) return String(lastName);
-    
-    // Final fallback with more descriptive text
     return `User ${id}`;
+};
+
+const getFormTitle = (r: any) => {
+    let title = r.FormName || r.formName || r.FormTitle || r.formTitle;
+    if (!title && r.FormResponse) {
+        try {
+            const parsed = typeof r.FormResponse === 'string' ? JSON.parse(r.FormResponse) : r.FormResponse;
+            if (parsed?.meta?.title) {
+                title = parsed.meta.title;
+            }
+        } catch (e) {}
+    }
+    return title || "Unknown Form";
+};
+
+const extractUserRemark = (r: any) => {
+    if (!r) return null;
+
+    if (r.ConsentRemovalRemark && String(r.ConsentRemovalRemark).trim() !== "") return String(r.ConsentRemovalRemark);
+    if (r.consentRemovalRemark && String(r.consentRemovalRemark).trim() !== "") return String(r.consentRemovalRemark);
+    if (r.Remark && String(r.Remark).trim() !== "") return String(r.Remark);
+    if (r.remark && String(r.remark).trim() !== "") return String(r.remark);
+
+    for (const key of Object.keys(r)) {
+        const lowerKey = key.toLowerCase();
+        if ((lowerKey.includes("remark") || lowerKey.includes("reason") || lowerKey.includes("message")) && 
+            !lowerKey.includes("action") && !lowerKey.includes("admin")) {
+            if (r[key] && String(r[key]).trim() !== "") return String(r[key]);
+        }
+    }
+
+    if (r.FormResponse) {
+        try {
+            const parsed = typeof r.FormResponse === 'string' ? JSON.parse(r.FormResponse) : r.FormResponse;
+            if (parsed.ConsentRemovalRemark) return String(parsed.ConsentRemovalRemark);
+            if (parsed.Remark) return String(parsed.Remark);
+        } catch (e) {}
+    }
+
+    return null;
 };
 
 export default function ConsentWithdrawRequest() {
@@ -173,9 +133,9 @@ export default function ConsentWithdrawRequest() {
     const [initialized, setInitialized] = useState(false);
     const [search, setSearch] = useState<string>(consentRemoveRequestParams.searchString ?? "");
     const [status, setStatus] = useState<RequestStatusUI>("All");
-    const [sort, setSort] = useState<SortUI>(
-        (consentRemoveRequestParams.sortOrder ?? "DESC") === "ASC" ? "Oldest" : "Newest"
-    );
+    const [sort, setSort] = useState<SortUI>((consentRemoveRequestParams.sortOrder ?? "DESC") === "ASC" ? "Oldest" : "Newest");
+
+    const [expandedId, setExpandedId] = useState<number | string | null>(null);
 
     const [actionOpen, setActionOpen] = useState(false);
     const [selectedRow, setSelectedRow] = useState<any | null>(null);
@@ -190,74 +150,38 @@ export default function ConsentWithdrawRequest() {
 
     const page = consentRemoveRequestParams.pageNumber ?? 1;
     const pageSize = consentRemoveRequestParams.pageSize ?? 10;
-
-    const totalPages = useMemo(() => {
-        return Math.max(1, Math.ceil((consentRemoveRequestsTotal || 0) / pageSize));
-    }, [consentRemoveRequestsTotal, pageSize]);
-
-
+    const totalPages = useMemo(() => Math.max(1, Math.ceil((consentRemoveRequestsTotal || 0) / pageSize)), [consentRemoveRequestsTotal, pageSize]);
     const initialSearch = consentRemoveRequestParams.searchString ?? "";
 
-
-    useEffect(() => {
-        setInitialized(true);
-    }, []);
+    useEffect(() => { setInitialized(true); }, []);
 
     useEffect(() => {
         if (!initialized) return;
         if (search === initialSearch) return;
-
         const t = setTimeout(() => {
-            refreshConsentRemoveRequests({
-                pageNumber: 1,
-                searchColumn: "Search",
-                searchString: search.trim(),
-            });
+            refreshConsentRemoveRequests({ pageNumber: 1, searchColumn: "Search", searchString: search.trim() });
         }, 400);
-
         return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [search, initialized]);
 
     const onChangeStatus = async (v: RequestStatusUI) => {
         setStatus(v);
-
-        if (v === "All") {
-            await refreshConsentRemoveRequests({
-                pageNumber: 1,
-                searchColumn: "",
-                searchString: "",
-            });
-            return;
-        }
-
-        if (v === "Pending") {
-            await refreshConsentRemoveRequests({
-                pageNumber: 1,
-                searchColumn: "ConsentResolved",
-                searchString: "N",
-            });
-            return;
-        }
-
-        await refreshConsentRemoveRequests({
-            pageNumber: 1,
-            searchColumn: "ConsentResolved",
-            searchString: "Y",
-        });
+        setExpandedId(null); 
+        if (v === "All") { await refreshConsentRemoveRequests({ pageNumber: 1, searchColumn: "", searchString: "" }); return; }
+        if (v === "Pending") { await refreshConsentRemoveRequests({ pageNumber: 1, searchColumn: "ConsentResolved", searchString: "N" }); return; }
+        await refreshConsentRemoveRequests({ pageNumber: 1, searchColumn: "ConsentResolved", searchString: "Y" });
     };
 
     const onChangeSort = async (v: SortUI) => {
         setSort(v);
-        await refreshConsentRemoveRequests({
-            pageNumber: 1,
-            sortColumn: "CreatedOn",
-            sortOrder: v === "Oldest" ? "ASC" : "DESC",
-        });
+        setExpandedId(null);
+        await refreshConsentRemoveRequests({ pageNumber: 1, sortColumn: "CreatedOn", sortOrder: v === "Oldest" ? "ASC" : "DESC" });
     };
 
     const goToPage = async (p: number) => {
         const next = Math.max(1, Math.min(totalPages, p));
+        setExpandedId(null);
         await refreshConsentRemoveRequests({ pageNumber: next });
     };
 
@@ -270,23 +194,13 @@ export default function ConsentWithdrawRequest() {
 
     const handleAction = async (statusValue: "Y" | "N") => {
         const remark = actionRemark.trim();
-
-        if (!remark) {
-            setActionRemarkError("Please enter remark.");
-            return;
-        }
-
-        if (!selectedRow?.Id) {
-            setDangerMsg("Invalid request selected.");
-            setDangerOpen(true);
-            return;
-        }
+        if (!remark) { setActionRemarkError("Please enter remark."); return; }
+        if (!selectedRow?.id) { setDangerMsg("Invalid request selected."); setDangerOpen(true); return; }
 
         try {
             setActionLoading(true);
-
             const res = await addConsentRemoveRequestAction({
-                ResponseId: selectedRow.Id,
+                ResponseId: selectedRow.id,
                 ConsentActionRemark: remark,
                 Status: statusValue,
             });
@@ -295,15 +209,8 @@ export default function ConsentWithdrawRequest() {
             setSelectedRow(null);
             setActionRemark("");
             setActionRemarkError("");
-
-            setSuccessMsg(
-                res?.responseMessage ||
-                (statusValue === "Y"
-                    ? "Consent request approved successfully."
-                    : "Consent request rejected successfully.")
-            );
+            setSuccessMsg(res?.responseMessage || (statusValue === "Y" ? "Consent request approved successfully." : "Consent request rejected successfully."));
             setSuccessOpen(true);
-
             await refreshConsentRemoveRequests();
         } catch (err: any) {
             setDangerMsg(err?.message || "Consent action failed");
@@ -313,31 +220,28 @@ export default function ConsentWithdrawRequest() {
         }
     };
 
-const tableRows = useMemo(() => {
-    return consentRemoveRequests.map((r) => {
-        const consentBadge = getConsentBadge(r.Consent);
-        const resolvedBadge = getResolvedBadge(r.ConsentResolved);
+    const tableRows = useMemo(() => {
+        return consentRemoveRequests.map((r) => {
+            const resolvedBadge = getResolvedBadge(r.ConsentResolved);
+            const summary = getUserName(r, String(r.Id));
+            const extractedRemark = extractUserRemark(r);
 
-        const summary = getUserName(r, String(r.Id));
-
-        return {
-            key: r.Id,
-            id: r.Id, 
-            formId: r.FormId,
-            summary,
-            email: r.EmailId,
-            mobile: r.MobileNo,
-            created: formatDate(r.CreatedOn),
-
-            consentText: consentBadge.text,
-            consentClass: consentBadge.className,
-            resolvedText: resolvedBadge.text,
-            resolvedClass: resolvedBadge.className,
-
-            raw: r,
-        };
-    });
-}, [consentRemoveRequests]);
+            return {
+                key: r.Id,
+                id: r.Id, 
+                formId: r.FormId,
+                formName: getFormTitle(r),
+                summary,
+                email: r.EmailId,
+                mobile: r.MobileNo,
+                created: formatDate(r.CreatedOn),
+                resolvedText: resolvedBadge.text,
+                resolvedClass: resolvedBadge.className,
+                userRemark: extractedRemark, 
+                raw: r,
+            };
+        });
+    }, [consentRemoveRequests]);
 
     return (
         <>
@@ -347,58 +251,27 @@ const tableRows = useMemo(() => {
                         <div className="panel-head p-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
                             <div>
                                 <div className="h5 mb-1">Consent Withdraw Requests</div>
-                                <div className="text-secondary small">
-                                    Manage consent withdrawal and removal requests submitted by users
-                                </div>
+                                <div className="text-secondary small">Manage consent withdrawal and removal requests submitted by users</div>
                             </div>
                         </div>
 
                         <div className="p-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
                             <div className="input-group" style={{ maxWidth: 520 }}>
-                                <span className="input-group-text search">
-                                    <i className="bi bi-search" />
-                                </span>
-                                <input
-                                    className="form-control search"
-                                    placeholder="Search by email, mobile, IP, form response..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                />
+                                <span className="input-group-text search"><i className="bi bi-search" /></span>
+                                <input className="form-control search" placeholder="Search by email, mobile, IP, form response..." value={search} onChange={(e) => setSearch(e.target.value)} />
                             </div>
 
                             <div className="d-flex gap-2 flex-wrap">
-                                <select
-                                    className="form-select search"
-                                    style={{ maxWidth: 190 }}
-                                    value={status}
-                                    onChange={(e) => onChangeStatus(e.target.value as RequestStatusUI)}
-                                >
+                                <select className="form-select search" style={{ maxWidth: 190 }} value={status} onChange={(e) => onChangeStatus(e.target.value as RequestStatusUI)}>
                                     <option value="All">All</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Resolved">Resolved</option>
                                 </select>
-
-                                <select
-                                    className="form-select search"
-                                    style={{ maxWidth: 190 }}
-                                    value={sort}
-                                    onChange={(e) => onChangeSort(e.target.value as SortUI)}
-                                >
+                                <select className="form-select search" style={{ maxWidth: 190 }} value={sort} onChange={(e) => onChangeSort(e.target.value as SortUI)}>
                                     <option value="Newest">Newest first</option>
                                     <option value="Oldest">Oldest first</option>
                                 </select>
-
-                                <select
-                                    className="form-select search"
-                                    style={{ maxWidth: 140 }}
-                                    value={pageSize}
-                                    onChange={(e) =>
-                                        refreshConsentRemoveRequests({
-                                            pageNumber: 1,
-                                            pageSize: Number(e.target.value),
-                                        })
-                                    }
-                                >
+                                <select className="form-select search" style={{ maxWidth: 140 }} value={pageSize} onChange={(e) => refreshConsentRemoveRequests({ pageNumber: 1, pageSize: Number(e.target.value) })}>
                                     <option value={5}>5 / page</option>
                                     <option value={10}>10 / page</option>
                                     <option value={20}>20 / page</option>
@@ -411,96 +284,88 @@ const tableRows = useMemo(() => {
                     <div className="panel">
                         <div className="panel-head p-3 d-flex align-items-center justify-content-between">
                             <div className="fw-bold">All Requests</div>
-                            <span className="badge badge-soft rounded-pill">
-                                Total: {consentRemoveRequestsTotal}
-                            </span>
+                            <span className="badge badge-soft rounded-pill">Total: {consentRemoveRequestsTotal}</span>
                         </div>
 
                         <div className="p-3">
                             <div className="table-responsive">
-                                <table className="table align-middle mb-0">
+                                <table className="table align-middle mb-0 table-hover">
                                     <thead>
                                         <tr>
-                                            <th style={{ minWidth: 230 }}>Request / User</th>
-                                            <th>Email</th>
-                                            <th>Mobile</th>
-                                            <th>Consent</th>
-                                            <th>Status</th>
-                                            <th>Created</th>
-                                            <th className="text-end" style={{ minWidth: 150 }}>
-                                                Actions
-                                            </th>
+                                            <th style={{ width: 40 }} className="text-center"></th>
+                                            <th style={{ minWidth: 200 }}>Request / User</th>
+                                            <th style={{ minWidth: 200 }}>Form Name</th>
+                                            <th style={{ minWidth: 150 }}>Email</th>
+                                            <th style={{ minWidth: 120 }}>Mobile</th>
+                                            <th style={{ minWidth: 100 }}>Status</th>
+                                            <th style={{ minWidth: 120 }}>Created</th>
+                                            <th className="text-end" style={{ minWidth: 120 }}>Actions</th>
                                         </tr>
                                     </thead>
 
                                     <tbody>
-                                        {(!initialized || consentRemoveRequestsLoading) && (
-                                            <TableSkeletonRows rows={pageSize} />
+                                        {(!initialized || consentRemoveRequestsLoading) && <TableSkeletonRows rows={pageSize} />}
+                                        {initialized && !consentRemoveRequestsLoading && !!consentRemoveRequestsError && (
+                                            <tr><td colSpan={8} className="text-center text-danger py-5">{consentRemoveRequestsError}</td></tr>
                                         )}
-
-                                        {initialized &&
-                                            !consentRemoveRequestsLoading &&
-                                            !!consentRemoveRequestsError && (
-                                                <tr>
-                                                    <td colSpan={7} className="text-center text-danger py-5">
-                                                        {consentRemoveRequestsError}
+                                        {initialized && !consentRemoveRequestsLoading && !consentRemoveRequestsError && tableRows.length === 0 && (
+                                            <tr><td colSpan={8} className="text-center text-secondary py-5">No consent withdrawal requests found.</td></tr>
+                                        )}
+                                        {initialized && !consentRemoveRequestsLoading && !consentRemoveRequestsError && tableRows.map((row) => (
+                                            <React.Fragment key={row.key}>
+                                                {/* MAIN ROW */}
+                                                <tr style={{ cursor: "pointer" }} onClick={() => {
+                                                    setExpandedId(expandedId === row.id ? null : row.id);
+                                                    if (expandedId !== row.id) {
+                                                        console.log("Raw Data received from Backend for this row:", row.raw);
+                                                    }
+                                                }}>
+                                                    <td className="text-center text-secondary">
+                                                        <i className={`bi bi-chevron-${expandedId === row.id ? "up" : "down"}`} />
                                                     </td>
-                                                </tr>
-                                            )}
-
-                                        {initialized &&
-                                            !consentRemoveRequestsLoading &&
-                                            !consentRemoveRequestsError &&
-                                            tableRows.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={7} className="text-center text-secondary py-5">
-                                                        No consent withdrawal requests found.
-                                                    </td>
-                                                </tr>
-                                            )}
-
-                                        {initialized &&
-                                            !consentRemoveRequestsLoading &&
-                                            !consentRemoveRequestsError &&
-                                            tableRows.map((row) => (
-                                                <tr key={row.key}>
                                                     <td>
-                                                        <div className="fw-semibold">{row.summary}</div>
-
-                                                        <div className="text-secondary small">
-                                                            Response ID: {row.id}
-                                                        </div>
-
-                                                        <div className="text-secondary small">
-                                                            Form ID: {row.formId}
-                                                        </div>
+                                                        <div className="fw-semibold text-truncate" style={{ maxWidth: 200 }}>{row.summary}</div>
+                                                        <div className="text-secondary small">Request ID: {row.id}</div>
                                                     </td>
-
+                                                    <td>
+                                                        <div className="fw-semibold" style={{ fontSize: 13, color: "var(--brand2)" }}>{row.formName}</div>
+                                                        {row.formId && (
+                                                            <div className="text-secondary small mt-1">Form ID: {row.formId}</div>
+                                                        )}
+                                                    </td>
                                                     <td className="text-secondary">{safeString(row.email)}</td>
                                                     <td className="text-secondary">{safeString(row.mobile)}</td>
-
-                                                    <td>
-                                                        <span className={row.consentClass}>{row.consentText}</span>
-                                                    </td>
-
-                                                    <td>
-                                                        <span className={row.resolvedClass}>{row.resolvedText}</span>
-                                                    </td>
-
-                                                    <td className="text-secondary">{row.created}</td>
-
-                                                    <td className="text-end">
-                                                        <button
-                                                            className="btn btn-outline-primary btn-sm"
-                                                            type="button"
-                                                            onClick={() => openActionPopup(row.raw)}
-                                                            disabled={row.raw?.ConsentResolved === "Y"}
-                                                        >
-                                                            <i className="bi bi-check2-circle" /> Approve
+                                                    <td><span className={row.resolvedClass}>{row.resolvedText}</span></td>
+                                                    <td className="text-secondary small">{row.created}</td>
+                                                    <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                                                        <button className="btn btn-outline-primary btn-sm" type="button" onClick={() => openActionPopup(row)} disabled={row.raw?.ConsentResolved === "Y"}>
+                                                            <i className="bi bi-check2-circle" /> Remark
                                                         </button>
                                                     </td>
                                                 </tr>
-                                            ))}
+
+                                                {/* EXPANDED ROW FOR REASON */}
+                                                {expandedId === row.id && (
+                                                    <tr>
+                                                        <td colSpan={8} className="p-0 border-0">
+                                                            <div className="p-4 mx-2 my-2" style={{ background: "rgba(255,193,7,0.04)", borderRadius: 12, border: "1px solid rgba(255,193,7,0.15)" }}>
+                                                                <div className="d-flex align-items-center gap-2 mb-2" style={{ color: "#e0c060", fontSize: 13 }}>
+                                                                    <i className="bi bi-chat-left-text" />
+                                                                    <strong className="fw-bold">User's Reason for Withdrawal</strong>
+                                                                </div>
+                                                                <div style={{ fontSize: 14, color: "var(--text-1)", lineHeight: 1.6, paddingLeft: 24, whiteSpace: "pre-wrap" }}>
+                                                                    {row.userRemark ? row.userRemark : (
+                                                                        <span className="text-secondary fst-italic">
+                                                                            No reason provided. 
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -508,48 +373,16 @@ const tableRows = useMemo(() => {
                             <div className="d-flex justify-content-end mt-3">
                                 <nav aria-label="Consent withdraw pagination">
                                     <ul className="pagination pagination-soft mb-0">
-                                        <li
-                                            className={`page-item ${page <= 1 || consentRemoveRequestsLoading ? "disabled" : ""
-                                                }`}
-                                        >
-                                            <button
-                                                className="page-link"
-                                                onClick={() => goToPage(page - 1)}
-                                                type="button"
-                                            >
-                                                Previous
-                                            </button>
+                                        <li className={`page-item ${page <= 1 || consentRemoveRequestsLoading ? "disabled" : ""}`}>
+                                            <button className="page-link" onClick={() => goToPage(page - 1)} type="button">Previous</button>
                                         </li>
-
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                            .slice(Math.max(0, page - 3), Math.min(totalPages, page + 2))
-                                            .map((p) => (
-                                                <li
-                                                    key={p}
-                                                    className={`page-item ${p === page ? "active" : ""}`}
-                                                >
-                                                    <button
-                                                        className="page-link"
-                                                        onClick={() => goToPage(p)}
-                                                        type="button"
-                                                        disabled={consentRemoveRequestsLoading}
-                                                    >
-                                                        {p}
-                                                    </button>
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).slice(Math.max(0, page - 3), Math.min(totalPages, page + 2)).map((p) => (
+                                                <li key={p} className={`page-item ${p === page ? "active" : ""}`}>
+                                                    <button className="page-link" onClick={() => goToPage(p)} type="button" disabled={consentRemoveRequestsLoading}>{p}</button>
                                                 </li>
-                                            ))}
-
-                                        <li
-                                            className={`page-item ${page >= totalPages || consentRemoveRequestsLoading ? "disabled" : ""
-                                                }`}
-                                        >
-                                            <button
-                                                className="page-link"
-                                                onClick={() => goToPage(page + 1)}
-                                                type="button"
-                                            >
-                                                Next
-                                            </button>
+                                        ))}
+                                        <li className={`page-item ${page >= totalPages || consentRemoveRequestsLoading ? "disabled" : ""}`}>
+                                            <button className="page-link" onClick={() => goToPage(page + 1)} type="button">Next</button>
                                         </li>
                                     </ul>
                                 </nav>
@@ -563,86 +396,77 @@ const tableRows = useMemo(() => {
                 </div>
             </div>
 
-            {actionOpen && (
+            {/* ACTION MODAL */}
+            {actionOpen && selectedRow && (
                 <>
                     <div className="modal-backdrop fade show" />
                     <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
                         <div className="modal-dialog modal-dialog-centered" role="document">
-                            <div className="modal-content">
-                                <div className="modal-header">
-                                    <div className="fw-bold">Consent Request Action</div>
-                                    <button
-                                        type="button"
-                                        className="btn-close"
-                                        onClick={() => {
-                                            if (actionLoading) return;
-                                            setActionOpen(false);
-                                        }}
-                                    />
+                            <div className="modal-content" style={{ background: "var(--bs-body-bg)", border: "1px solid var(--stroke)", borderRadius: 16 }}>
+                                
+                                <div className="modal-header border-bottom border-secondary" style={{ padding: "1.5rem" }}>
+                                    <div className="fw-bold fs-4" style={{ color: "var(--text-1)" }}>Consent Request Action</div>
+                                    <button type="button" className="btn-close" style={{ filter: "var(--bs-theme) === 'dark' ? 'invert(1) grayscale(100%) brightness(200%)' : 'none'" }} onClick={() => { if (actionLoading) return; setActionOpen(false); }} />
                                 </div>
 
-                                <div className="modal-body">
-                                    <div className="mb-2 small text-secondary">
-                                        Request ID: <span className="fw-semibold text-dark">{selectedRow?.Id}</span>
+                                <div className="modal-body p-4" style={{ padding: "1.5rem" }}>
+                                    <div className="d-flex gap-4 mb-4">
+                                        <div className="p-3 w-100" style={{ background: "var(--soft)", borderRadius: 12, border: "1px solid var(--stroke)" }}>
+                                            <div className="small text-secondary mb-1">Request ID:</div>
+                                            <div className="fw-bold" style={{ color: "var(--brand2)", fontSize: 16 }}>{selectedRow.id}</div>
+                                        </div>
+                                        <div className="p-3 w-100" style={{ background: "var(--soft)", borderRadius: 12, border: "1px solid var(--stroke)" }}>
+                                            <div className="small text-secondary mb-1">User:</div>
+                                            <div className="fw-bold" style={{ color: "var(--brand2)", fontSize: 16 }}>{selectedRow.summary}</div>
+                                        </div>
                                     </div>
 
-                                    <div className="mb-3 small text-secondary">
-                                        User: <span className="fw-semibold text-dark">
-                                            {selectedRow ? getUserName(selectedRow, String(selectedRow.Id)) : "N/A"}
-                                        </span>
-                                    </div>
+                                    {/* User's Message Displayed prominently in Action Modal */}
+                                    {/* <div className="mb-4 p-4" style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, border: "1px solid var(--stroke)" }}>
+                                        <div className="fw-bold mb-2" style={{ color: "var(--brand2)", fontSize: 15 }}>User's Reason for Withdrawal:</div>
+                                        <div style={{ fontSize: 14, color: "var(--text-1)", lineHeight: 1.6, fontStyle: "italic" }}>
+                                            {selectedRow.userRemark ? `"${selectedRow.userRemark}"` : <span className="text-secondary">No reason provided.</span>}
+                                        </div>
+                                    </div> */}
 
-                                    <label className="form-label fw-semibold">
-                                        Remark <span className="text-danger">*</span>
+                                    <label className="form-label fw-bold mb-3" style={{ fontSize: 15, color: "var(--brand2)" }}>
+                                        Admin Remark / Notes <span className="text-danger">*</span>
                                     </label>
-
+                                    
                                     <textarea
                                         className={`form-control ${actionRemarkError ? "is-invalid" : ""}`}
                                         rows={4}
-                                        placeholder="Enter action remark..."
+                                        placeholder="Add a note explaining the action taken..."
                                         value={actionRemark}
                                         onChange={(e) => {
                                             setActionRemark(e.target.value);
                                             if (e.target.value.trim()) setActionRemarkError("");
                                         }}
+                                        style={{ 
+                                            background: "rgba(255,255,255,0.03)", 
+                                            border: "1px solid var(--stroke)", 
+                                            color: "var(--text-1)",
+                                            borderRadius: 12,
+                                            padding: "1rem"
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = "var(--brand2)";
+                                            e.target.style.boxShadow = "0 0 0 3px var(--soft)";
+                                            e.target.style.color = "var(--brand2)";
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = "var(--stroke)";
+                                            e.target.style.boxShadow = "none";
+                                            e.target.style.color = "var(--text-1)";
+                                        }}
                                     />
-
-                                    {actionRemarkError && (
-                                        <div className="invalid-feedback d-block">
-                                            {actionRemarkError}
-                                        </div>
-                                    )}
+                                    {actionRemarkError && <div className="invalid-feedback d-block mt-2">{actionRemarkError}</div>}
                                 </div>
 
-                                <div className="modal-footer">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-secondary btn-sm"
-                                        onClick={() => {
-                                            if (actionLoading) return;
-                                            setActionOpen(false);
-                                        }}
-                                    >
-                                        Close
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-danger btn-sm"
-                                        disabled={actionLoading}
-                                        onClick={() => handleAction("N")}
-                                    >
-                                        {actionLoading ? "Processing..." : "Reject"}
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="btn btn-primary btn-sm"
-                                        disabled={actionLoading}
-                                        onClick={() => handleAction("Y")}
-                                    >
-                                        {actionLoading ? "Processing..." : "Accept"}
-                                    </button>
+                                <div className="modal-footer border-top border-secondary" style={{ padding: "1.25rem", gap: "0.5rem" }}>
+                                    <button type="button" className="btn btn-outline-secondary px-4 py-2" style={{ borderRadius: 10 }} onClick={() => { if (actionLoading) return; setActionOpen(false); }}>Close</button>
+                                    <button type="button" className="btn btn-danger px-4 py-2 fw-semibold" style={{ borderRadius: 10 }} disabled={actionLoading} onClick={() => handleAction("N")}>{actionLoading ? "Processing..." : "Reject Withdrawal"}</button>
+                                    <button type="button" className="btn btn-success px-4 py-2 fw-semibold" style={{ borderRadius: 10 }} disabled={actionLoading} onClick={() => handleAction("Y")}>{actionLoading ? "Processing..." : "Approve Withdrawal"}</button>
                                 </div>
                             </div>
                         </div>
@@ -650,27 +474,11 @@ const tableRows = useMemo(() => {
                 </>
             )}
 
-            <PopupAlert
-                open={successOpen}
-                type="success"
-                title="Success"
-                message={successMsg}
-                onClose={() => setSuccessOpen(false)}
-                autoCloseMs={2200}
-            />
-
-            <PopupAlert
-                open={dangerOpen}
-                type="danger"
-                title="Error"
-                message={dangerMsg}
-                onClose={() => setDangerOpen(false)}
-                autoCloseMs={2500}
-            />
+            <PopupAlert open={successOpen} type="success" title="Success" message={successMsg} onClose={() => setSuccessOpen(false)} autoCloseMs={2200} />
+            <PopupAlert open={dangerOpen} type="danger" title="Error" message={dangerMsg} onClose={() => setDangerOpen(false)} autoCloseMs={2500} />
         </>
     );
 }
-
 
 
 // import React, { useEffect, useMemo, useState } from "react";
