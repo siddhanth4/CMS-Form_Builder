@@ -640,11 +640,31 @@
 // export default PrivacyNoticeList;
 
     import React, { useState, useEffect } from "react";
-    import { getNoticesList } from "../Api/noticeApi";
+    import { getAdminDashboard } from "../Api/Admin/getDashboardDetails";
 
     type NoticeStatus = "Draft" | "Published" | "Archived";
 
     // ─── Helpers ──────────────────────────────────────────────────────────────────
+    const formatTimestamp = (timestamp: string | undefined | null) => {
+        if (!timestamp) return "N/A";
+        
+        try {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return timestamp;
+            
+            return date.toLocaleString('en-IN', { 
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch {
+            return timestamp;
+        }
+    };
+
     const getPrivacyNoticeName = (notice: any, id: string) => {
         // Try various possible field names for the notice name
         return notice.noticeName || 
@@ -733,14 +753,9 @@
         const loadNotices = async () => {
             try {
                 setLoading(true);
-                const res = await getNoticesList();
-                let data = [];
-                if (res?.data) {
-                    data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-                } else if (Array.isArray(res)) {
-                    data = res;
-                }
-                setNotices(data);
+                const data = await getAdminDashboard();
+                console.log("Dashboard API Response:", data);
+                setNotices(data?.activityLogs || []);
             } catch (err) {
                 console.error("Error loading notices", err);
             } finally {
@@ -891,11 +906,11 @@
                                 <table className="table align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th style={{ minWidth: 320, padding: 20 }}>Notice</th>
-                                            <th style={{ minWidth: 100 }}>Status</th>
-                                            <th style={{ minWidth: 10 }}>Completion</th>
-                                            <th style={{ minWidth: 50 }}>Last Modified</th>
-                                            <th style={{ minWidth: 10, textAlign: "right" }}>Actions</th>
+                                            <th style={{ minWidth: 320, maxWidth: 400, padding: 20 }}>Notice</th>
+                                            <th style={{ minWidth: 100, maxWidth: 120 }}>Status</th>
+                                            <th style={{ minWidth: 180, maxWidth: 200, paddingRight: 15 }}>Completion</th>
+                                            <th style={{ minWidth: 140, maxWidth: 140, paddingLeft: 15 }}>Time</th>
+                                            <th style={{ minWidth: 150, maxWidth: 200, textAlign: "right" }}>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -963,10 +978,12 @@
     </div>
 </td>
                                                     <td>{statusBadge(mappedStatus)}</td>
-                                                    <td>{completionBar(done, total)}</td>
-                                                    <td>
-                                                        <span className="text-secondary" style={{ fontSize: 12 }}>
-                                                            {n.lastModified || n.createdAt || "—"}
+                                                    <td style={{ minWidth: 180, maxWidth: 200, paddingRight: 15 }}>
+                                                        {completionBar(done, total)}
+                                                    </td>
+                                                    <td style={{ minWidth: 140, maxWidth: 140, paddingLeft: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        <span className="text-secondary" style={{ fontSize: 12, display: 'block' }}>
+                                                            {formatTimestamp(n.created)}
                                                         </span>
                                                     </td>
                                                     <td>
