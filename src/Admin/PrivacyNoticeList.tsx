@@ -638,214 +638,486 @@
 // };
 
 // export default PrivacyNoticeList;
+import React, { useState, useEffect } from "react";
+import { getNoticesList } from "../Api/noticeApi";
 
-    import React, { useState, useEffect } from "react";
-    import { getNoticesList } from "../Api/noticeApi";
+type NoticeStatus = "Draft" | "Published" | "Archived";
 
-    type NoticeStatus = "Draft" | "Published" | "Archived";
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const getPrivacyNoticeName = (notice: any, id: string) => {
+    return (
+        notice.noticeName ||
+        notice.NoticeName ||
+        notice.name ||
+        notice.Name ||
+        notice.title ||
+        notice.Title ||
+        notice.privacyNoticeName ||
+        notice.PrivacyNoticeName ||
+        (notice.notice || notice.Notice
+            ? extractTitleFromContent(notice.notice || notice.Notice)
+            : null) ||
+        `Privacy Notice ${id}`
+    );
+};
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────────
-    const getPrivacyNoticeName = (notice: any, id: string) => {
-        // Try various possible field names for the notice name
-        return notice.noticeName || 
-            notice.NoticeName || 
-            notice.name || 
-            notice.Name || 
-            notice.title || 
-            notice.Title ||
-            notice.privacyNoticeName ||
-            notice.PrivacyNoticeName ||
-            // If there's any content/notice text, try to extract a title from it
-            (notice.notice || notice.Notice ? extractTitleFromContent(notice.notice || notice.Notice) : null) ||
-            // Final fallback with more descriptive text
-            `Privacy Notice ${id}`;
-    };
+const extractTitleFromContent = (content: string) => {
+    if (!content || typeof content !== "string") return null;
 
-    const extractTitleFromContent = (content: string) => {
-        if (!content || typeof content !== 'string') return null;
-        
-        // Try to extract title from HTML content
-        const titleMatch = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
-        if (titleMatch && titleMatch[1]) {
-            return titleMatch[1].replace(/<[^>]*>/g, '').trim();
+    const titleMatch = content.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
+
+    if (titleMatch && titleMatch[1]) {
+        return titleMatch[1].replace(/<[^>]*>/g, "").trim();
+    }
+
+    const firstParagraph = content.match(/<p[^>]*>(.*?)<\/p>/i);
+
+    if (firstParagraph && firstParagraph[1]) {
+        const text = firstParagraph[1]
+            .replace(/<[^>]*>/g, "")
+            .trim();
+
+        if (text.length < 100 && !text.includes(".")) {
+            return text;
         }
-        
-        // Try to extract title from first paragraph if it looks like a title
-        const firstParagraph = content.match(/<p[^>]*>(.*?)<\/p>/i);
-        if (firstParagraph && firstParagraph[1]) {
-            const text = firstParagraph[1].replace(/<[^>]*>/g, '').trim();
-            // If it's reasonably short and doesn't look like regular content
-            if (text.length < 100 && !text.includes('.')) {
-                return text;
-            }
-        }
-        
-        return null;
-    };
+    }
 
-    const statusBadge = (status: NoticeStatus | string) => {
-        const badgeClass = status === "Draft" 
+    return null;
+};
+
+const statusBadge = (status: NoticeStatus | string) => {
+    const badgeClass =
+        status === "Draft"
             ? "badge text-bg-warning rounded-pill"
             : status === "Archived"
             ? "badge text-bg-secondary rounded-pill"
             : "badge text-bg-success rounded-pill";
 
-        return (
-            <span className={badgeClass}>
-                {status || "Published"}
-            </span>
-        );
-    };
+    return (
+        <span className={badgeClass}>
+            {status || "Published"}
+        </span>
+    );
+};
 
-    const completionBar = (done: number, total: number) => {
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-        return (
-            <div>
-                <div className="d-flex align-items-center justify-content-between mb-2">
-                    <div className="text-secondary small">{done}/{total} sections</div>
-                    <div className="fw-semibold">{pct}%</div>
+const completionBar = (done: number, total: number) => {
+    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    return (
+        <div>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+                <div className="text-secondary small">
+                    {done}/{total} sections
                 </div>
-                <div className="progress" role="progressbar" aria-label={`${pct}% complete`}>
-                    <div className="progress-bar" style={{ width: `${pct}%` }} />
-                </div>
+
+                <div className="fw-semibold">{pct}%</div>
             </div>
-        );
+
+            <div
+                className="progress"
+                role="progressbar"
+                aria-label={`${pct}% complete`}
+            >
+                <div
+                    className="progress-bar"
+                    style={{ width: `${pct}%` }}
+                />
+            </div>
+        </div>
+    );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+interface Props {
+    onCreateNew?: () => void;
+    onEdit?: (id: string) => void;
+}
+
+const PrivacyNoticeList: React.FC<Props> = ({
+    onCreateNew,
+    onEdit,
+}) => {
+    const [notices, setNotices] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const [searchTerm, setSearchTerm] = useState("");
+
+    const [statusFilter, setStatusFilter] = useState<
+        "All" | NoticeStatus | string
+    >("All");
+
+    const [deleteConfirm, setDeleteConfirm] =
+        useState<string | null>(null);
+
+    const [previewHtml, setPreviewHtml] =
+        useState<string | null>(null);
+
+    // ✅ PAGINATION
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const ITEMS_PER_PAGE = 10;
+
+    // ✅ LOAD ONLY ONCE
+    useEffect(() => {
+        loadNotices();
+    }, []);
+
+    // ✅ RESET PAGE WHEN SEARCH/FILTER CHANGES
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter]);
+
+    const loadNotices = async () => {
+        try {
+            setLoading(true);
+
+            const res = await getNoticesList();
+
+            let data = [];
+
+            if (res?.data) {
+                data =
+                    typeof res.data === "string"
+                        ? JSON.parse(res.data)
+                        : res.data;
+            } else if (Array.isArray(res)) {
+                data = res;
+            }
+
+            setNotices(data);
+        } catch (err) {
+            console.error("Error loading notices", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // ─── Main Component ───────────────────────────────────────────────────────────
-    interface Props {
-        onCreateNew?: () => void;
-        onEdit?: (id: string) => void;
-    }
+    const filtered = [...notices]
+    .reverse() // ✅ newest notice first
+    .filter((n, i) => {
 
-    const PrivacyNoticeList: React.FC<Props> = ({ onCreateNew, onEdit }) => {
-        const [notices, setNotices] = useState<any[]>([]);
-        const [loading, setLoading] = useState(true);
-        const [searchTerm, setSearchTerm] = useState("");
-        const [statusFilter, setStatusFilter] = useState<"All" | NoticeStatus | string>("All");
-        const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-        const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+        const id =
+            n.id ||
+            n.Id ||
+            n.noticeId ||
+            n.NoticeId ||
+            i.toString();
 
-        useEffect(() => {
-            loadNotices();
-        }, []);
+        const name = getPrivacyNoticeName(n, id);
 
-        const loadNotices = async () => {
-            try {
-                setLoading(true);
-                const res = await getNoticesList();
-                let data = [];
-                if (res?.data) {
-                    data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
-                } else if (Array.isArray(res)) {
-                    data = res;
-                }
-                setNotices(data);
-            } catch (err) {
-                console.error("Error loading notices", err);
-            } finally {
-                setLoading(false);
-            }
-        };
+        const matchSearch = name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
 
-        const filtered = notices.filter((n, i) => {
-            const id = n.id || n.Id || n.noticeId || n.NoticeId || i.toString();
-            const name = getPrivacyNoticeName(n, id);
-            const matchSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
-            const mappedStatus = n.status || "Published";
-            const matchStatus = statusFilter === "All" || mappedStatus === statusFilter;
-            return matchSearch && matchStatus;
-        });
+        const mappedStatus = n.status || "Published";
 
-        const handleDelete = (id: string) => {
-            setNotices((prev) => prev.filter((n) => (n.id || n.Id || n.NoticeId) !== id));
-            setDeleteConfirm(null);
-        };
+        const matchStatus =
+            statusFilter === "All" ||
+            mappedStatus === statusFilter;
 
-        const stats = {
-            total: notices.length,
-            published: notices.filter((n) => (n.status || "Published") === "Published").length,
-            draft: notices.filter((n) => n.status === "Draft").length,
-            archived: notices.filter((n) => n.status === "Archived").length,
-        };
+        return matchSearch && matchStatus;
+    });
 
-        return (
-            <>
-                {/* HTML Preview Modal */}
-                {previewHtml !== null && (
-                    <div className="modal d-block" style={{ background: "rgba(0,0,0,0.65)", zIndex: 1055 }} onClick={() => setPreviewHtml(null)}>
-                        <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" onClick={(e) => e.stopPropagation()}>
-                            <div className="modal-content" style={{ background: "var(--bs-body-bg, #0f1117)", border: "1px solid rgba(79,110,247,0.3)" }}>
-                                <div className="modal-header border-bottom border-secondary">
-                                    <h5 className="modal-title fw-bold text-primary"><i className="bi bi-eye me-2" /> Notice Preview</h5>
-                                    <button type="button" className="btn-close btn-close-white" onClick={() => setPreviewHtml(null)}></button>
+    // ✅ PAGINATION
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filtered.length / ITEMS_PER_PAGE)
+    );
+
+    const paginatedNotices = filtered.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    const handleDelete = (id: string) => {
+        setNotices((prev) =>
+            prev.filter(
+                (n) =>
+                    (n.id || n.Id || n.NoticeId) !== id
+            )
+        );
+
+        setDeleteConfirm(null);
+    };
+
+    const stats = {
+        total: notices.length,
+
+        published: notices.filter(
+            (n) =>
+                (n.status || "Published") ===
+                "Published"
+        ).length,
+
+        draft: notices.filter(
+            (n) => n.status === "Draft"
+        ).length,
+
+        archived: notices.filter(
+            (n) => n.status === "Archived"
+        ).length,
+    };
+
+    return (
+        <>
+            {/* HTML Preview Modal */}
+            {previewHtml !== null && (
+                <div
+                    className="modal d-block"
+                    style={{
+                        background: "rgba(0,0,0,0.65)",
+                        zIndex: 1055,
+                    }}
+                    onClick={() =>
+                        setPreviewHtml(null)
+                    }
+                >
+                    <div
+                        className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+                        <div
+                            className="modal-content"
+                            style={{
+                                background:
+                                    "var(--bs-body-bg, #0f1117)",
+                                border:
+                                    "1px solid rgba(79,110,247,0.3)",
+                            }}
+                        >
+                            <div className="modal-header border-bottom border-secondary">
+                                <h5 className="modal-title fw-bold text-primary">
+                                    <i className="bi bi-eye me-2" />
+                                    Notice Preview
+                                </h5>
+
+                                <button
+                                    type="button"
+                                    className="btn-close btn-close-white"
+                                    onClick={() =>
+                                        setPreviewHtml(null)
+                                    }
+                                />
+                            </div>
+
+                            <div
+                                className="modal-body p-4"
+                                dangerouslySetInnerHTML={{
+                                    __html: previewHtml,
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirm Modal */}
+            {deleteConfirm && (
+                <div
+                    className="modal d-block"
+                    style={{
+                        background:
+                            "rgba(0,0,0,0.65)",
+                        zIndex: 1055,
+                    }}
+                >
+                    <div
+                        className="modal-dialog modal-dialog-centered"
+                        style={{ maxWidth: 420 }}
+                    >
+                        <div
+                            className="modal-content"
+                            style={{
+                                background:
+                                    "var(--bs-body-bg, #0f1117)",
+                                border:
+                                    "1px solid rgba(220,53,69,0.3)",
+                                borderRadius: 14,
+                            }}
+                        >
+                            <div className="modal-body p-4 text-center">
+                                <div
+                                    style={{
+                                        width: 52,
+                                        height: 52,
+                                        borderRadius: "50%",
+                                        background:
+                                            "rgba(220,53,69,0.12)",
+                                        display: "flex",
+                                        alignItems:
+                                            "center",
+                                        justifyContent:
+                                            "center",
+                                        margin:
+                                            "0 auto 16px",
+                                    }}
+                                >
+                                    <i className="bi bi-trash3 text-danger fs-4" />
                                 </div>
-                                <div className="modal-body p-4" dangerouslySetInnerHTML={{ __html: previewHtml }}></div>
+
+                                <h6 className="fw-bold mb-2">
+                                    Delete Privacy
+                                    Notice?
+                                </h6>
+
+                                <p className="text-secondary small mb-4">
+                                    This action cannot
+                                    be undone. The
+                                    notice will be
+                                    permanently removed.
+                                </p>
+
+                                <div className="d-flex gap-2 justify-content-center mt-4">
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary"
+                                        style={{
+                                            minWidth: 80,
+                                        }}
+                                        onClick={() =>
+                                            setDeleteConfirm(
+                                                null
+                                            )
+                                        }
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        className="btn btn-sm btn-danger"
+                                        style={{
+                                            minWidth: 80,
+                                        }}
+                                        onClick={() =>
+                                            handleDelete(
+                                                deleteConfirm
+                                            )
+                                        }
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Delete Confirm Modal */}
-                {deleteConfirm && (
-                    <div className="modal d-block" style={{ background: "rgba(0,0,0,0.65)", zIndex: 1055 }}>
-                        <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 420 }}>
-                            <div className="modal-content" style={{ background: "var(--bs-body-bg, #0f1117)", border: "1px solid rgba(220,53,69,0.3)", borderRadius: 14 }}>
-                                <div className="modal-body p-4 text-center">
-                                    <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(220,53,69,0.12)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                                        <i className="bi bi-trash3 text-danger fs-4" />
-                                    </div>
-                                    <h6 className="fw-bold mb-2">Delete Privacy Notice?</h6>
-                                    <p className="text-secondary small mb-4">This action cannot be undone. The notice will be permanently removed.</p>
-                                    <div className="d-flex gap-2 justify-content-center mt-4">
-                                        <button className="btn btn-sm btn-outline-secondary" style={{ minWidth: 80 }} onClick={() => setDeleteConfirm(null)}>Cancel</button>
-                                        <button className="btn btn-sm btn-danger" style={{ minWidth: 80 }} onClick={() => handleDelete(deleteConfirm)}>Delete</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+            <div className="container-fluid app-shell">
+                <div className="row g-0">
 
-                <div className="container-fluid app-shell">
-                    <div className="row g-0">
                     {/* Header */}
                     <div className="panel mb-3">
                         <div className="panel-head p-3 d-flex flex-wrap gap-3 align-items-center justify-content-between">
                             <div>
-                                <div className="h5 mb-1">Privacy Notices</div>
+                                <div className="h5 mb-1">
+                                    Privacy Notices
+                                </div>
+
                                 <div className="text-secondary small">
-                                    Manage DPDP Act, 2023 compliant privacy notices
+                                    Manage DPDP Act,
+                                    2023 compliant
+                                    privacy notices
                                 </div>
                             </div>
+
                             <div className="d-flex gap-2">
-                                <button className="btn btn-sm btn-outline-secondary" onClick={loadNotices}>
-                                    <i className="bi bi-arrow-clockwise" /> Refresh
+                                <button
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={loadNotices}
+                                >
+                                    <i className="bi bi-arrow-clockwise" />
+                                    {" "}Refresh
                                 </button>
-                                <button className="btn btn-sm btn-primary d-flex align-items-center gap-2" onClick={onCreateNew}>
-                                    <i className="bi bi-plus-lg" /> Create New Notice
+
+                                <button
+                                    className="btn btn-sm btn-primary d-flex align-items-center gap-2"
+                                    onClick={
+                                        onCreateNew
+                                    }
+                                >
+                                    <i className="bi bi-plus-lg" />
+                                    Create New Notice
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stats Row (Reduced to 4 logical cards, omitting Emails) */}
+                    {/* Stats */}
                     <div className="row g-3 mb-3">
                         {[
-                            { label: "Total Notices", value: stats.total, icon: "bi-files", color: "#4f6ef7" },
-                            { label: "Published", value: stats.published, icon: "bi-broadcast", color: "#3dd68c" },
-                            { label: "Drafts", value: stats.draft, icon: "bi-pencil-square", color: "#ffc107" },
-                            { label: "Archived", value: stats.archived, icon: "bi-archive", color: "#adb5bd" }
+                            {
+                                label:
+                                    "Total Notices",
+                                value: stats.total,
+                                icon: "bi-files",
+                                color: "#4f6ef7",
+                            },
+
+                            {
+                                label:
+                                    "Published",
+                                value:
+                                    stats.published,
+                                icon: "bi-broadcast",
+                                color: "#3dd68c",
+                            },
+
+                            {
+                                label: "Drafts",
+                                value: stats.draft,
+                                icon:
+                                    "bi-pencil-square",
+                                color: "#ffc107",
+                            },
+
+                            {
+                                label:
+                                    "Archived",
+                                value:
+                                    stats.archived,
+                                icon:
+                                    "bi-archive",
+                                color: "#adb5bd",
+                            },
                         ].map((s) => (
-                            <div key={s.label} className="col-6 col-md-3">
+                            <div
+                                key={s.label}
+                                className="col-6 col-md-3"
+                            >
                                 <div className="stat-card">
                                     <div className="d-flex align-items-center justify-content-between">
                                         <div>
-                                            <div className="text-secondary small" style={{ fontWeight: 500 }}>{s.label}</div>
-                                            <div className="stat-value">{s.value}</div>
+                                            <div
+                                                className="text-secondary small"
+                                                style={{
+                                                    fontWeight:
+                                                        500,
+                                                }}
+                                            >
+                                                {
+                                                    s.label
+                                                }
+                                            </div>
+
+                                            <div className="stat-value">
+                                                {
+                                                    s.value
+                                                }
+                                            </div>
                                         </div>
-                                        <div className="stat-icon" style={{ background: `${s.color}22`, color: s.color }}>
-                                            <i className={`bi ${s.icon} fs-5`} />
+
+                                        <div
+                                            className="stat-icon"
+                                            style={{
+                                                background: `${s.color}22`,
+                                                color: s.color,
+                                            }}
+                                        >
+                                            <i
+                                                className={`bi ${s.icon} fs-5`}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -856,141 +1128,562 @@
                     {/* Filters */}
                     <div className="panel mb-3">
                         <div className="p-3 d-flex flex-wrap gap-2 align-items-center">
-                            <div style={{ flex: 1, minWidth: 200, maxWidth: 340 }}>
+
+                            <div
+                                style={{
+                                    flex: 1,
+                                    minWidth: 200,
+                                    maxWidth: 340,
+                                }}
+                            >
                                 <div className="input-group input-group-sm">
-                                    <span className="input-group-text" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRight: "none", color: "#adb5bd" }}>
+
+                                    <span
+                                        className="input-group-text"
+                                        style={{
+                                            background:
+                                                "rgba(255,255,255,0.05)",
+                                            border:
+                                                "1px solid rgba(255,255,255,0.12)",
+                                            borderRight:
+                                                "none",
+                                            color:
+                                                "#adb5bd",
+                                        }}
+                                    >
                                         <i className="bi bi-search" />
                                     </span>
-                                    <input type="text" className="form-control" placeholder="Search notices..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ borderLeft: "none" }} />
+
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Search notices..."
+                                        value={
+                                            searchTerm
+                                        }
+                                        onChange={(
+                                            e
+                                        ) =>
+                                            setSearchTerm(
+                                                e
+                                                    .target
+                                                    .value
+                                            )
+                                        }
+                                        style={{
+                                            borderLeft:
+                                                "none",
+                                        }}
+                                    />
                                 </div>
                             </div>
+
                             <div className="d-flex gap-1">
-                                {(["All", "Published", "Draft", "Archived"]).map((s) => (
-                                    <button key={s} onClick={() => setStatusFilter(s)} className="btn btn-sm" style={{ background: statusFilter === s ? "rgba(79,110,247,0.2)" : "rgba(255,255,255,0.04)", border: `1px solid ${statusFilter === s ? "rgba(79,110,247,0.4)" : "rgba(255,255,255,0.1)"}`, color: statusFilter === s ? "#7c9ff7" : "var(--bs-secondary-color)", fontSize: 12 }}>
+                                {[
+                                    "All",
+                                    "Published",
+                                    "Draft",
+                                    "Archived",
+                                ].map((s) => (
+                                    <button
+                                        key={s}
+                                        onClick={() =>
+                                            setStatusFilter(
+                                                s
+                                            )
+                                        }
+                                        className="btn btn-sm"
+                                        style={{
+                                            background:
+                                                statusFilter ===
+                                                s
+                                                    ? "rgba(79,110,247,0.2)"
+                                                    : "rgba(255,255,255,0.04)",
+
+                                            border: `1px solid ${
+                                                statusFilter ===
+                                                s
+                                                    ? "rgba(79,110,247,0.4)"
+                                                    : "rgba(255,255,255,0.1)"
+                                            }`,
+
+                                            color:
+                                                statusFilter ===
+                                                s
+                                                    ? "#7c9ff7"
+                                                    : "var(--bs-secondary-color)",
+
+                                            fontSize:
+                                                12,
+                                        }}
+                                    >
                                         {s}
                                     </button>
                                 ))}
                             </div>
+
                             <span className="ms-auto text-secondary small">
-                                {filtered.length} notice{filtered.length !== 1 ? "s" : ""}
+                                {filtered.length}{" "}
+                                notice
+                                {filtered.length !==
+                                1
+                                    ? "s"
+                                    : ""}
                             </span>
                         </div>
                     </div>
 
                     {/* Table */}
                     <div className="panel">
+
                         {loading ? (
-                            <div className="text-center py-5 text-secondary"><div className="spinner-border spinner-border-sm me-2"/> Loading notices...</div>
-                        ) : filtered.length === 0 ? (
-                            <div className="text-center py-5 text-secondary" style={{ fontSize: 14 }}>
-                                <i className="bi bi-file-earmark-x mb-2 d-block" style={{ fontSize: 36, opacity: 0.3 }} />
-                                No privacy notices found
+                            <div className="text-center py-5 text-secondary">
+                                <div className="spinner-border spinner-border-sm me-2" />
+                                Loading notices...
+                            </div>
+                        ) : filtered.length ===
+                          0 ? (
+                            <div
+                                className="text-center py-5 text-secondary"
+                                style={{
+                                    fontSize: 14,
+                                }}
+                            >
+                                <i
+                                    className="bi bi-file-earmark-x mb-2 d-block"
+                                    style={{
+                                        fontSize: 36,
+                                        opacity: 0.3,
+                                    }}
+                                />
+
+                                No privacy notices
+                                found
                             </div>
                         ) : (
-                            <div className="table-responsive">
-                                <table className="table align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ minWidth: 320, padding: 20 }}>Notice</th>
-                                            <th style={{ minWidth: 100 }}>Status</th>
-                                            <th style={{ minWidth: 10 }}>Completion</th>
-                                            <th style={{ minWidth: 50 }}>Last Modified</th>
-                                            <th style={{ minWidth: 10, textAlign: "right" }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filtered.map((n, i) => {
-                                            const id = n.id || n.Id || n.noticeId || n.NoticeId || i.toString();
-                                            const name = getPrivacyNoticeName(n, id);
-                                            const htmlContent = n.notice || n.Notice || "<p>No content</p>";
-                                            const mappedStatus = n.status || "Published";
-                                            
-                                            // Fallbacks for progress bar if backend doesn't send them
-                                            const done = n.sectionsCompleted !== undefined ? n.sectionsCompleted : 10;
-                                            const total = n.totalSections !== undefined ? n.totalSections : 10;
+                            <>
+                                <div className="table-responsive">
+                                    <table className="table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th
+                                                    style={{
+                                                        minWidth:
+                                                            320,
+                                                        padding:
+                                                            20,
+                                                    }}
+                                                >
+                                                    Notice
+                                                </th>
 
-                                            return (
-                                                <tr key={id}>
-                                                    <td style={{ maxWidth: 360 }}>
-    <div className="d-flex align-items-start gap-2 w-100">
+                                                <th
+                                                    style={{
+                                                        minWidth:
+                                                            100,
+                                                    }}
+                                                >
+                                                    Status
+                                                </th>
 
-        {/* ICON */}
-        <div
-            style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: "rgba(79,110,247,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                marginLeft: 14, //  slight left margin for better spacin   g
-            }}
-        >
-            <i className="bi bi-file-earmark-lock2 text-primary" />
-        </div>
+                                                <th
+                                                    style={{
+                                                        minWidth:
+                                                            10,
+                                                    }}
+                                                >
+                                                    Completion
+                                                </th>
 
-        {/* TEXT BLOCK (FIXED) */}
-       <div style={{ flex: 1, minWidth: 0 }}>
+                                                <th
+                                                    style={{
+                                                        minWidth:
+                                                            50,
+                                                    }}
+                                                >
+                                                    Last
+                                                    Modified
+                                                </th>
 
-    <div
-        className="fw-semibold"
-        style={{
-            fontSize: 14,        // 🔥 slightly bigger (visible impact)
-            lineHeight: "1.5",   // 🔥 better spacing
-            whiteSpace: "normal",
-            wordBreak: "break-word"
-        }}
-    >
-        {name}
-    </div>
+                                                <th
+                                                    style={{
+                                                        minWidth:
+                                                            10,
+                                                        textAlign:
+                                                            "right",
+                                                    }}
+                                                >
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
 
-    <div
-        className="text-secondary"
-        style={{
-            fontSize: 11,
-            marginLeft: 6,        // 🔥 more breathing space
-            lineHeight: "1.4"
-        }}
-    >
-        ID: {id}
-        {n.version ? ` · v${n.version}` : ""}
-        {n.language ? ` · ${n.language}` : ""}
-    </div>
+                                        <tbody>
+                                            {paginatedNotices.map(
+                                                (
+                                                    n,
+                                                    i
+                                                ) => {
+                                                    const id =
+                                                        n.id ||
+                                                        n.Id ||
+                                                        n.noticeId ||
+                                                        n.NoticeId ||
+                                                        i.toString();
 
-</div>
-    </div>
-</td>
-                                                    <td>{statusBadge(mappedStatus)}</td>
-                                                    <td>{completionBar(done, total)}</td>
-                                                    <td>
-                                                        <span className="text-secondary" style={{ fontSize: 12 }}>
-                                                            {n.lastModified || n.createdAt || "—"}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div className="d-flex gap-2 justify-content-end">
-                                                            <button className="btn btn-sm btn-outline-primary" style={{ padding: "4px 8px", fontSize: 12, border: "none", background: "rgba(79,110,247,0.1)", color: "#7c9ff7" }} onClick={() => setPreviewHtml(htmlContent)}>
-                                                                <i className="bi bi-eye" /> Preview
-                                                            </button>
-                                                            <button className="btn btn-sm" style={{ background: "rgba(220,53,69,0.1)", border: "none", color: "#f86e7a", padding: "4px 8px", fontSize: 12 }} title="Delete" onClick={() => setDeleteConfirm(id)}>
-                                                                <i className="bi bi-trash3" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    const name =
+                                                        getPrivacyNoticeName(
+                                                            n,
+                                                            id
+                                                        );
+
+                                                    const htmlContent =
+                                                        n.notice ||
+                                                        n.Notice ||
+                                                        "<p>No content</p>";
+
+                                                    const mappedStatus =
+                                                        n.status ||
+                                                        "Published";
+
+                                                    const done =
+                                                        n.sectionsCompleted !==
+                                                        undefined
+                                                            ? n.sectionsCompleted
+                                                            : 10;
+
+                                                    const total =
+                                                        n.totalSections !==
+                                                        undefined
+                                                            ? n.totalSections
+                                                            : 10;
+
+                                                    return (
+                                                        <tr
+                                                            key={
+                                                                id
+                                                            }
+                                                        >
+                                                            <td
+                                                                style={{
+                                                                    maxWidth:
+                                                                        360,
+                                                                }}
+                                                            >
+                                                                <div className="d-flex align-items-start gap-2 w-100">
+
+                                                                    <div
+                                                                        style={{
+                                                                            width:
+                                                                                36,
+                                                                            height:
+                                                                                36,
+                                                                            borderRadius:
+                                                                                8,
+                                                                            background:
+                                                                                "rgba(79,110,247,0.12)",
+                                                                            display:
+                                                                                "flex",
+                                                                            alignItems:
+                                                                                "center",
+                                                                            justifyContent:
+                                                                                "center",
+                                                                            flexShrink:
+                                                                                0,
+                                                                            marginLeft:
+                                                                                14,
+                                                                        }}
+                                                                    >
+                                                                        <i className="bi bi-file-earmark-lock2 text-primary" />
+                                                                    </div>
+
+                                                                    <div
+                                                                        style={{
+                                                                            flex: 1,
+                                                                            minWidth: 0,
+                                                                        }}
+                                                                    >
+                                                                        <div
+                                                                            className="fw-semibold"
+                                                                            style={{
+                                                                                fontSize:
+                                                                                    14,
+                                                                                lineHeight:
+                                                                                    "1.5",
+                                                                                whiteSpace:
+                                                                                    "normal",
+                                                                                wordBreak:
+                                                                                    "break-word",
+                                                                            }}
+                                                                        >
+                                                                            {
+                                                                                name
+                                                                            }
+                                                                        </div>
+
+                                                                        <div
+                                                                            className="text-secondary"
+                                                                            style={{
+                                                                                fontSize:
+                                                                                    11,
+                                                                                marginLeft:
+                                                                                    6,
+                                                                                lineHeight:
+                                                                                    "1.4",
+                                                                            }}
+                                                                        >
+                                                                            ID:
+                                                                            {" "}
+                                                                            {
+                                                                                id
+                                                                            }
+
+                                                                            {n.version
+                                                                                ? ` · v${n.version}`
+                                                                                : ""}
+
+                                                                            {n.language
+                                                                                ? ` · ${n.language}`
+                                                                                : ""}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            <td>
+                                                                {statusBadge(
+                                                                    mappedStatus
+                                                                )}
+                                                            </td>
+
+                                                            <td>
+                                                                {completionBar(
+                                                                    done,
+                                                                    total
+                                                                )}
+                                                            </td>
+
+                                                            <td>
+                                                                <span
+                                                                    className="text-secondary"
+                                                                    style={{
+                                                                        fontSize:
+                                                                            12,
+                                                                    }}
+                                                                >
+                                                                    {n.lastModified ||
+                                                                        n.createdAt ||
+                                                                        "—"}
+                                                                </span>
+                                                            </td>
+
+                                                            <td>
+                                                                <div className="d-flex gap-2 justify-content-end">
+
+                                                                    <button
+                                                                        className="btn btn-sm btn-outline-primary"
+                                                                        style={{
+                                                                            padding:
+                                                                                "4px 8px",
+                                                                            fontSize:
+                                                                                12,
+                                                                            border:
+                                                                                "none",
+                                                                            background:
+                                                                                "rgba(79,110,247,0.1)",
+                                                                            color:
+                                                                                "#7c9ff7",
+                                                                        }}
+                                                                        onClick={() =>
+                                                                            setPreviewHtml(
+                                                                                htmlContent
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <i className="bi bi-eye" />
+                                                                        {" "}
+                                                                        Preview
+                                                                    </button>
+
+                                                                    <button
+                                                                        className="btn btn-sm"
+                                                                        style={{
+                                                                            background:
+                                                                                "rgba(220,53,69,0.1)",
+                                                                            border:
+                                                                                "none",
+                                                                            color:
+                                                                                "#f86e7a",
+                                                                            padding:
+                                                                                "4px 8px",
+                                                                            fontSize:
+                                                                                12,
+                                                                        }}
+                                                                        title="Delete"
+                                                                        onClick={() =>
+                                                                            setDeleteConfirm(
+                                                                                id
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <i className="bi bi-trash3" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Pagination */}
+                                {totalPages > 1 && (
+                                    <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-top">
+
+                                        <div className="text-secondary small">
+                                            Page{" "}
+                                            {
+                                                currentPage
+                                            }{" "}
+                                            of{" "}
+                                            {
+                                                totalPages
+                                            }{" "}
+                                            • Showing{" "}
+                                            {
+                                                paginatedNotices.length
+                                            }{" "}
+                                            records
+                                        </div>
+
+                                        <nav>
+                                            <ul className="pagination pagination-sm mb-0">
+
+                                                {/* Previous */}
+                                                <li
+                                                    className={`page-item ${
+                                                        currentPage ===
+                                                        1
+                                                            ? "disabled"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    <button
+                                                        className="page-link"
+                                                        onClick={() =>
+                                                            setCurrentPage(
+                                                                (
+                                                                    p
+                                                                ) =>
+                                                                    Math.max(
+                                                                        1,
+                                                                        p -
+                                                                            1
+                                                                    )
+                                                            )
+                                                        }
+                                                    >
+                                                        Previous
+                                                    </button>
+                                                </li>
+
+                                                {/* Pages */}
+                                                {Array.from(
+                                                    {
+                                                        length:
+                                                            totalPages,
+                                                    },
+                                                    (
+                                                        _,
+                                                        i
+                                                    ) =>
+                                                        i +
+                                                        1
+                                                )
+                                                    .slice(
+                                                        Math.max(
+                                                            0,
+                                                            currentPage -
+                                                                3
+                                                        ),
+
+                                                        Math.min(
+                                                            totalPages,
+                                                            currentPage +
+                                                                2
+                                                        )
+                                                    )
+                                                    .map(
+                                                        (
+                                                            page
+                                                        ) => (
+                                                            <li
+                                                                key={
+                                                                    page
+                                                                }
+                                                                className={`page-item ${
+                                                                    currentPage ===
+                                                                    page
+                                                                        ? "active"
+                                                                        : ""
+                                                                }`}
+                                                            >
+                                                                <button
+                                                                    className="page-link"
+                                                                    onClick={() =>
+                                                                        setCurrentPage(
+                                                                            page
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        page
+                                                                    }
+                                                                </button>
+                                                            </li>
+                                                        )
+                                                    )}
+
+                                                {/* Next */}
+                                                <li
+                                                    className={`page-item ${
+                                                        currentPage ===
+                                                        totalPages
+                                                            ? "disabled"
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    <button
+                                                        className="page-link"
+                                                        onClick={() =>
+                                                            setCurrentPage(
+                                                                (
+                                                                    p
+                                                                ) =>
+                                                                    Math.min(
+                                                                        totalPages,
+                                                                        p +
+                                                                            1
+                                                                    )
+                                                            )
+                                                        }
+                                                    >
+                                                        Next
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
-                    </div>
                 </div>
-            </>
-        );
-    };
+            </div>
+        </>
+    );
+};
 
-    export default PrivacyNoticeList;
+export default PrivacyNoticeList;
