@@ -42,7 +42,7 @@ const DbCluster = () => {
         id: org.Id,
         name: org.OrgName || `Organization ${index + 1}`,
         status: org.Status === "Y" ? "HEALTHY" : "CRITICAL",
-        storageUsed: Math.random() * 5 + 1,
+        storageUsed: (org.Id % 5) + 1.5,
         storageTotal: 10,
         consents: "—",
         uptime: "99.9%",

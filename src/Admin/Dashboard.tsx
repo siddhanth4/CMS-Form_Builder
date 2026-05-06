@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import { useProject } from "../Context/projectContext";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import SingleClusterCard from "../Components/SingleClusterCard";
 
 type StatCard = {
     label: string;
@@ -49,7 +50,7 @@ const Dashboard: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const { dashboard, dashboardLoading, dashboardError } = useProject();
+    const { dashboard, dashboardLoading, dashboardError, admin } = useProject();
 
     /* 🔥 INFOGRAPHIC DATA */
     const chartData = [
@@ -146,6 +147,19 @@ const Dashboard: React.FC = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* DB Cluster Card for Current Organization */}
+                <div className="row g-3 mb-3">
+                    <div className="col-12">
+                        <div className="panel mb-3">
+                            <div className="panel-head p-3">
+                                <div className="h5 mb-1">Organization DB Cluster</div>
+                                <div className="text-secondary small">Database cluster status for your organization</div>
+                            </div>
+                        </div>
+                        <SingleClusterCard orgCode={admin?.orgCode || 0} />
+                    </div>
                 </div>
 
                 {/* Bottom Panels */}
