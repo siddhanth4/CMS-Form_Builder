@@ -5,7 +5,7 @@ import { getFormResponseByResponseId } from "../Api/getFormResponseByResponseId"
 import { updateFormResponseData }       from "../Api/updateFormResponse";
 import { addConsentRemoveRequest }       from "../Api/addRemoveConsentRequest";
 import { sendOtpMail }                  from "../Api/sendMailOtp";
-import { submitGrievance }              from "../Api/grievance";
+import { addGrievance  }              from "../Api/grievance";
 import type { FormResponseByResponseIdParsed } from "../Api/getFormResponseByResponseId";
 import type { GrievanceType }           from "../Api/grievance";
 
@@ -424,49 +424,51 @@ const MyFormDetails: React.FC = () => {
     };
 
     const submitGrievanceHandler = async () => {
-        let valid = true;
-        if (!grievanceIssueType) {
-            setGrievanceIssueTypeErr("Please select an issue type.");
-            valid = false;
-        } else {
-            setGrievanceIssueTypeErr("");
-        }
-        if (!grievanceDescription.trim()) {
-            setGrievanceDescErr("Please describe your issue.");
-            valid = false;
-        } else {
-            setGrievanceDescErr("");
-        }
-        if (!valid) return;
+    let valid = true;
+    if (!grievanceIssueType) {
+        setGrievanceIssueTypeErr("Please select an issue type.");
+        valid = false;
+    } else {
+        setGrievanceIssueTypeErr("");
+    }
+    if (!grievanceDescription.trim()) {
+        setGrievanceDescErr("Please describe your issue.");
+        valid = false;
+    } else {
+        setGrievanceDescErr("");
+    }
+    if (!valid) return;
 
-        try {
-            setGrievanceLoading(true);
-            const { email, mobile } = extractEmailMobile();
-            const userName = extractUserName();
+    try {
+        setGrievanceLoading(true);
+        const { email, mobile } = extractEmailMobile();
+        const userName = extractUserName();
 
-            await submitGrievance({
-                ConsentId:        `CNS-${responseId}`,
-                UserName:         userName,
-                UserEmail:        email,
-                UserMobile:       mobile,
-                IssueType:        grievanceIssueType,
-                IssueDescription: grievanceDescription.trim(),
-                Priority:         "Medium",
-                FormId:           formId,
-            });
+        // ✅ Uses actual Swagger endpoint: POST /api/Grievance/addGrievance (multipart)
+        await addGrievance({
+            FormId:      formId,
+            ResponseId:  responseId,
+            Subject:     grievanceIssueType,          // IssueType → Subject
+            Details:     grievanceDescription.trim(), // Description → Details
+            PublicName:  userName,
+            PublicMobile: mobile,
+            PublicEmail:  email,
+        });
 
-            setGrievanceModalOpen(false);
-            setSuccessTitle("Grievance Submitted");
-            setSuccessMsg("Your grievance has been submitted. Our team will review it and respond to your registered email address.");
-            setSuccessOpen(true);
-        } catch (err: any) {
-            setGrievanceModalOpen(false);
-            setDangerMsg(err?.message || "Failed to submit grievance");
-            setDangerOpen(true);
-        } finally {
-            setGrievanceLoading(false);
-        }
-    };
+        setGrievanceModalOpen(false);
+        setSuccessTitle("Grievance Submitted");
+        setSuccessMsg(
+            "Your grievance has been submitted. Our team will review it and respond to your registered email address."
+        );
+        setSuccessOpen(true);
+    } catch (err: any) {
+        setGrievanceModalOpen(false);
+        setDangerMsg(err?.message || "Failed to submit grievance");
+        setDangerOpen(true);
+    } finally {
+        setGrievanceLoading(false);
+    }
+};
 
     /* ── Guard states ─────────────────────────────────────────────── */
     if (!responseId || isNaN(responseId)) {
