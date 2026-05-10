@@ -133,7 +133,7 @@ const Dashboard: React.FC = () => {
                 )}
 
                 {/* Stats Cards */}
-                <div className="row g-4 mb-3">
+                <div className="row g-3 mb-3">
                     {stats.map((s) => (
                         <div key={s.label} className="col-12 col-md-6 col-xl-3">
                             <div className="stat-card h-100" style={{ padding: "1.25rem" }}>
@@ -152,12 +152,7 @@ const Dashboard: React.FC = () => {
                 {/* DB Cluster Card for Current Organization */}
                 <div className="row g-3 mb-3">
                     <div className="col-12">
-                        <div className="panel mb-3">
-                            <div className="panel-head p-3">
-                                <div className="h5 mb-1">Organization DB Cluster</div>
-                                <div className="text-secondary small">Database cluster status for your organization</div>
-                            </div>
-                        </div>
+                        
                         <SingleClusterCard orgCode={admin?.orgCode || 0} />
                     </div>
                 </div>

@@ -100,10 +100,14 @@ const SingleClusterCard: React.FC<SingleClusterCardProps> = ({ orgCode }) => {
     return (
         <div className="panel">
             <div className="panel-head p-3 d-flex justify-content-between align-items-center">
+
                 <div className="d-flex align-items-center gap-2 fw-bold fs-5">
+
                     <i className={`bi ${cluster.icon}`} />
+                    <div className="h5 mt-2 fw-bold">Database Cluster :</div>
                     {cluster.name}
                 </div>
+                
                 <span className={`badge rounded-pill ${cluster.status === "HEALTHY" ? "text-bg-success" : "text-bg-warning"}`}>
                     {cluster.status}
                 </span>
