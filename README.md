@@ -4,6 +4,22 @@ DPDP Act-compliant CMS — stores, shares and manages user data on behalf of org
 
 <img width="1159" height="652" alt="image" src="https://github.com/user-attachments/assets/8c9cce1a-bf61-4efb-9736-a45fd34162ec" />
 
+Admin Dashboard
+
+<img width="1356" height="676" alt="Screenshot 2026-05-27 152008" src="https://github.com/user-attachments/assets/1a109bb5-f6b7-492b-b732-89db50330105" />
+
+Privacy Notice
+
+<img width="1349" height="726" alt="Screenshot 2026-05-27 151840" src="https://github.com/user-attachments/assets/db41e660-5e56-47de-bb28-2afc176cdf98" />
+
+Withdraw Consent Request
+
+<img width="1342" height="672" alt="Screenshot 2026-05-27 152756" src="https://github.com/user-attachments/assets/76d69eb4-37ca-42c1-a0ba-581a0f382a40" />
+
+Organization Audit Logs
+
+<img width="1352" height="675" alt="Screenshot 2026-05-27 152219" src="https://github.com/user-attachments/assets/eecd95bf-86fd-4830-9d52-b48e236e309e" />
+
 
 ## React Compiler
 
